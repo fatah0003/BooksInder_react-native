@@ -39,6 +39,7 @@ security:
         # Routes publiques (login + inscription)
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/books, roles: PUBLIC_ACCESS }
 
         # Toutes les autres routes API nécessitent une authentification
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
