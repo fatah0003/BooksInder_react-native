@@ -4,11 +4,11 @@ namespace App\Controller;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class RegisterController extends AbstractController
 {
@@ -20,15 +20,18 @@ class RegisterController extends AbstractController
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
+        // Validation simple (à améliorer plus tard avec un formulaire)
         if (!isset($data['email'], $data['password'])) {
-            return new JsonResponse(['error' => 'Email et mot de passe sont requis'], 400);
+            return new JsonResponse(['error' => 'Email et mot de passe requis'], 400);
         }
 
+        // Vérifie si l’utilisateur existe déjà
         $existingUser = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
         if ($existingUser) {
             return new JsonResponse(['error' => 'Cet email est déjà utilisé'], 400);
         }
 
+        // Création de l’utilisateur
         $user = new User();
         $user->setEmail($data['email']);
         $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);

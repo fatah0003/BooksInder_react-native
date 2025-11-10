@@ -40,6 +40,7 @@ security:
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
 #        - { path: ^/api/users$, roles: PUBLIC_ACCESS }
+#        - { path: ^/api/users/1$, roles: PUBLIC_ACCESS }
         - { path: ^/api/books, roles: PUBLIC_ACCESS }
 
         # Toutes les autres routes API nécessitent une authentification
