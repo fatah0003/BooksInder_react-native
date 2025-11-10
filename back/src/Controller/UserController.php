@@ -2,22 +2,44 @@
 
 namespace App\Controller;
 
-use App\Repository\UserRepository;
+use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
 class UserController extends AbstractController
 {
-    #[Route('/api/users', name: 'api_users', methods: ['GET'])]
-    public function index(UserRepository $userRepository): Response
+    #[Route('/api/users', name: 'api_users_list', methods: ['GET'])]
+    public function index(EntityManagerInterface $em): JsonResponse
     {
-        // Récupérer tous les utilisateurs (SANS les mots de passe)
-        $users = $userRepository->findAll();
+        $users = $em->getRepository(User::class)->findAll();
 
-        return $this->json($users, 200, [], [
-            'groups' => ['user:read']
+        $data = [];
+        foreach ($users as $user) {
+            $data[] = [
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'roles' => $user->getRoles(),
+            ];
+        }
+
+        return new JsonResponse($data);
+    }
+
+    #[Route('/api/users/{id}', name: 'api_user_detail', methods: ['GET'])]
+    public function show(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $user = $em->getRepository(User::class)->find($id);
+
+        if (!$user) {
+            return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
+        }
+
+        return new JsonResponse([
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
         ]);
     }
 }
-
