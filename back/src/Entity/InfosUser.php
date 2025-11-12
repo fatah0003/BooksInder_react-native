@@ -13,27 +13,27 @@ class InfosUser
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['infosuser:read'])]
+    #[Groups(['infosuser:read', 'user:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 30)]
-    #[Groups(['infosuser:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
     private ?string $userName = null;
 
     #[ORM\Column(length: 20)]
-    #[Groups(['infosuser:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
     private ?string $phoneNumber = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['infosuser:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
     private ?string $city = null;
 
     #[ORM\Column]
-    #[Groups(['infosuser:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
     private ?\DateTimeImmutable $birthDate = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Groups(['infosuser:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
     private ?string $bio = null;
 
     #[ORM\Column]
