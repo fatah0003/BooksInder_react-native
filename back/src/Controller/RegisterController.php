@@ -39,9 +39,7 @@ class RegisterController extends AbstractController
 
             $em->persist($user);
             $em->flush();
-
-            $json = $serializer->serialize($user, 'json', ['groups' => 'user:read']);
-            return new JsonResponse($json, 201, [], true);
+            return $this->json($user, 201, [], ['groups' => 'user:read']);
 
         } catch (\Exception $e) {
             return new JsonResponse(['error' => 'Erreur : ' . $e->getMessage()], 500);

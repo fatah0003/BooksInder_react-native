@@ -6,8 +6,8 @@ use App\Entity\Book;
 use App\Repository\BookRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 
@@ -15,21 +15,18 @@ use Symfony\Component\Serializer\SerializerInterface;
 class BookController extends AbstractController
 {
     #[Route('', name: 'list', methods: ['GET'])]
-    public function list(BookRepository $bookRepository, SerializerInterface $serializer): JsonResponse
+    public function list(BookRepository $bookRepository): JsonResponse
     {
         $books = $bookRepository->findAll();
 
-        $json = $serializer->serialize($books, 'json', ['groups' => 'book:read']);
-
-        return new JsonResponse($json, 200, [], true);
+        // plus besoin du Serializer ici :
+        return $this->json($books, 200, [], ['groups' => 'book:read']);
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'])]
-    public function show(Book $book, SerializerInterface $serializer): JsonResponse
+    public function show(Book $book): JsonResponse
     {
-        $json = $serializer->serialize($book, 'json', ['groups' => 'book:read']);
-
-        return new JsonResponse($json, 200, [], true);
+        return $this->json($book, 200, [], ['groups' => 'book:read']);
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
@@ -43,8 +40,8 @@ class BookController extends AbstractController
         $em->persist($book);
         $em->flush();
 
-        $json = $serializer->serialize($book, 'json', ['groups' => 'book:read']);
-        return new JsonResponse($json, 201, [], true);
+        // renvoie direct le JSON
+        return $this->json($book, 201, [], ['groups' => 'book:read']);
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
@@ -60,8 +57,7 @@ class BookController extends AbstractController
         $book->setUpdatedAt(new \DateTimeImmutable());
         $em->flush();
 
-        $json = $serializer->serialize($book, 'json', ['groups' => 'book:read']);
-        return new JsonResponse($json, 200, [], true);
+        return $this->json($book, 200, [], ['groups' => 'book:read']);
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
@@ -70,6 +66,6 @@ class BookController extends AbstractController
         $em->remove($book);
         $em->flush();
 
-        return new JsonResponse(null, 204);
+        return $this->json(null, 204);
     }
 }

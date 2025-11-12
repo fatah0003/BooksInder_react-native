@@ -21,16 +21,14 @@ class InfosUserController extends AbstractController
     public function index(InfosUserRepository $repo, SerializerInterface $serializer): JsonResponse
     {
         $infosUsers = $repo->findAll();
-        $json = $serializer->serialize($infosUsers, 'json', ['groups' => 'infosuser:read']);
-        return new JsonResponse($json, 200, [], true);
+        return $this->json($infosUsers, 200, [], ['groups' => 'infosuser:read']);
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function show(InfosUser $infosUser, SerializerInterface $serializer): JsonResponse
     {
-        $json = $serializer->serialize($infosUser, 'json', ['groups' => 'infosuser:read']);
-        return new JsonResponse($json, 200, [], true);
+        return $this->json($infosUser, 200, [], ['groups' => 'infosuser:read']);
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
@@ -54,8 +52,8 @@ class InfosUserController extends AbstractController
             $em->persist($infosUser);
             $em->flush();
 
-            $json = $serializer->serialize($infosUser, 'json', ['groups' => 'infosuser:read']);
-            return new JsonResponse($json, 201, [], true);
+            return $this->json($infosUser, 201, [], ['groups' => 'infosuser:read']);
+
 
         } catch (NotEncodableValueException $e) {
             return new JsonResponse(['error' => 'Invalid JSON format'], 400);
@@ -89,11 +87,10 @@ class InfosUserController extends AbstractController
             $infosUser->setUpdatedAt(new \DateTimeImmutable());
             $em->flush();
 
-            $json = $serializer->serialize($infosUser, 'json', ['groups' => 'infosuser:read']);
-            return new JsonResponse($json, 200, [], true);
+            return $this->json($infosUser, 200, [], ['groups' => 'infosuser:read']);
 
         } catch (NotEncodableValueException $e) {
-            return new JsonResponse(['error' => 'Invalid JSON format'], 400);
+            return $this->json(['error' => 'Invalid JSON format'], 400);
         }
     }
 
@@ -103,7 +100,7 @@ class InfosUserController extends AbstractController
     {
         // L’utilisateur ne peut supprimer que son propre profil
         if ($this->getUser() !== $infosUser->getUser()) {
-            return new JsonResponse(['error' => 'Access denied'], 403);
+            return $this->json(['error' => 'Access denied'], 403);
         }
 
         $em->remove($infosUser);

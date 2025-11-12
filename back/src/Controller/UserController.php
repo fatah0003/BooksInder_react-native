@@ -6,8 +6,8 @@ use App\Entity\User;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Serializer\Exception\NotEncodableValueException;
@@ -19,24 +19,22 @@ class UserController extends AbstractController
 {
     #[Route('', name: 'index', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function index(UserRepository $repo, SerializerInterface $serializer): JsonResponse
+    public function index(UserRepository $repo): JsonResponse
     {
         $users = $repo->findAll();
-        $json = $serializer->serialize($users, 'json', ['groups' => 'user:read']);
-        return new JsonResponse($json, 200, [], true);
+        return $this->json($users, 200, [], ['groups' => 'user:read']);
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
-    public function show(User $user, SerializerInterface $serializer): JsonResponse
+    public function show(User $user): JsonResponse
     {
         // Un utilisateur ne peut voir que ses propres infos sauf s’il est admin
         if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
-            return new JsonResponse(['error' => 'Access denied'], 403);
+            return $this->json(['error' => 'Access denied'], 403);
         }
 
-        $json = $serializer->serialize($user, 'json', ['groups' => 'user:read']);
-        return new JsonResponse($json, 200, [], true);
+        return $this->json($user, 200, [], ['groups' => 'user:read']);
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
@@ -48,28 +46,31 @@ class UserController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         SerializerInterface $serializer
     ): JsonResponse {
-        // Seul l’utilisateur concerné ou un admin peut modifier
         if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
-            return new JsonResponse(['error' => 'Access denied'], 403);
+            return $this->json(['error' => 'Access denied'], 403);
         }
-        $jsonContent = $request->getContent();
+
         try {
             $serializer->deserialize(
-                $jsonContent,
+                $request->getContent(),
                 User::class,
                 'json',
                 ['object_to_populate' => $user, 'groups' => 'user:write']
             );
+
+            // Si un mot de passe est envoyé, on le rehash
             if (!empty($user->getPassword())) {
-                $hashedPassword = $passwordHasher->hashPassword($user, $user->getPassword());
-                $user->setPassword($hashedPassword);
+                $user->setPassword(
+                    $passwordHasher->hashPassword($user, $user->getPassword())
+                );
             }
+
             $user->setUpdatedAt(new \DateTimeImmutable());
             $em->flush();
-            $json = $serializer->serialize($user, 'json', ['groups' => 'user:read']);
-            return new JsonResponse($json, 200, [], true);
+
+            return $this->json($user, 200, [], ['groups' => 'user:read']);
         } catch (NotEncodableValueException $e) {
-            return new JsonResponse(['error' => 'Invalid JSON format'], 400);
+            return $this->json(['error' => 'Invalid JSON format'], 400);
         }
     }
 
@@ -77,14 +78,13 @@ class UserController extends AbstractController
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function delete(User $user, EntityManagerInterface $em): JsonResponse
     {
-        // Seul l’utilisateur ou un admin peut supprimer le compte
         if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
-            return new JsonResponse(['error' => 'Access denied'], 403);
+            return $this->json(['error' => 'Access denied'], 403);
         }
 
         $em->remove($user);
         $em->flush();
 
-        return new JsonResponse(null, 204);
+        return $this->json(null, 204);
     }
 }
