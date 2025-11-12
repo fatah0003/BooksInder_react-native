@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\BookRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
 class Book
@@ -12,27 +13,35 @@ class Book
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['book:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
+    #[Groups(['book:read', 'book:write'])]
     private ?string $title = null;
 
     #[ORM\Column(length: 100)]
+    #[Groups(['book:read', 'book:write'])]
     private ?string $author = null;
 
     #[ORM\Column(length: 20)]
+    #[Groups(['book:read', 'book:write'])]
     private ?string $isbn = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['book:read', 'book:write'])]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Groups(['book:read', 'book:write'])]
     private ?int $pages = null;
 
     #[ORM\Column]
+    #[Groups(['book:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['book:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct()

@@ -3,101 +3,88 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Exception\NotEncodableValueException;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/users')]
+#[Route('/api/users', name: 'api_users_')]
 class UserController extends AbstractController
 {
-    #[Route('', name: 'get_all_users', methods: ['GET'])]
+    #[Route('', name: 'index', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function getAllUsers(EntityManagerInterface $em): JsonResponse
+    public function index(UserRepository $repo, SerializerInterface $serializer): JsonResponse
     {
-        $users = $em->getRepository(User::class)->findAll();
-
-        $data = array_map(function (User $user) {
-            return [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'roles' => $user->getRoles(),
-            ];
-        }, $users);
-
-        return new JsonResponse($data, 200);
+        $users = $repo->findAll();
+        $json = $serializer->serialize($users, 'json', ['groups' => 'user:read']);
+        return new JsonResponse($json, 200, [], true);
     }
 
-    #[Route('/{id}', name: 'get_user', methods: ['GET'])]
-    #[IsGranted('ROLE_USER')]
-    public function getUserById(int $id, EntityManagerInterface $em): JsonResponse
+    #[Route('/{id}', name: 'show', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function show(User $user, SerializerInterface $serializer): JsonResponse
     {
-        $user = $em->getRepository(User::class)->find($id);
-
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
+        // Un utilisateur ne peut voir que ses propres infos sauf s’il est admin
+        if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
+            return new JsonResponse(['error' => 'Access denied'], 403);
         }
 
-        return new JsonResponse([
-            'id' => $user->getId(),
-            'email' => $user->getEmail(),
-            'roles' => $user->getRoles(),
-        ], 200);
+        $json = $serializer->serialize($user, 'json', ['groups' => 'user:read']);
+        return new JsonResponse($json, 200, [], true);
     }
 
-    #[Route('/{id}', name: 'update_user', methods: ['PUT'])]
-    #[IsGranted('ROLE_USER')]
-    public function updateUser(
-        int $id,
+    #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function update(
         Request $request,
+        User $user,
         EntityManagerInterface $em,
-        UserPasswordHasherInterface $hasher
+        UserPasswordHasherInterface $passwordHasher,
+        SerializerInterface $serializer
     ): JsonResponse {
-        $user = $em->getRepository(User::class)->find($id);
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
+        // Seul l’utilisateur concerné ou un admin peut modifier
+        if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
+            return new JsonResponse(['error' => 'Access denied'], 403);
         }
-
-        // Empêche un utilisateur lambda de modifier un autre compte
-        if ($user !== $this->getUser() && !in_array('ROLE_ADMIN', $this->getUser()->getRoles())) {
-            return new JsonResponse(['error' => 'Accès refusé'], 403);
+        $jsonContent = $request->getContent();
+        try {
+            $serializer->deserialize(
+                $jsonContent,
+                User::class,
+                'json',
+                ['object_to_populate' => $user, 'groups' => 'user:write']
+            );
+            if (!empty($user->getPassword())) {
+                $hashedPassword = $passwordHasher->hashPassword($user, $user->getPassword());
+                $user->setPassword($hashedPassword);
+            }
+            $user->setUpdatedAt(new \DateTimeImmutable());
+            $em->flush();
+            $json = $serializer->serialize($user, 'json', ['groups' => 'user:read']);
+            return new JsonResponse($json, 200, [], true);
+        } catch (NotEncodableValueException $e) {
+            return new JsonResponse(['error' => 'Invalid JSON format'], 400);
         }
-
-        $data = json_decode($request->getContent(), true);
-
-        if (isset($data['email'])) {
-            $user->setEmail($data['email']);
-        }
-
-        if (isset($data['password'])) {
-            $user->setPassword($hasher->hashPassword($user, $data['password']));
-        }
-
-        $em->flush();
-
-        return new JsonResponse(['message' => 'Utilisateur mis à jour avec succès'], 200);
     }
 
-    #[Route('/{id}', name: 'delete_user', methods: ['DELETE'])]
-    #[IsGranted('ROLE_USER')]
-    public function deleteUser(int $id, EntityManagerInterface $em): JsonResponse
+    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function delete(User $user, EntityManagerInterface $em): JsonResponse
     {
-        $user = $em->getRepository(User::class)->find($id);
-        if (!$user) {
-            return new JsonResponse(['error' => 'Utilisateur non trouvé'], 404);
-        }
-
-        if ($user !== $this->getUser() && !in_array('ROLE_ADMIN', $this->getUser()->getRoles())) {
-            return new JsonResponse(['error' => 'Accès refusé'], 403);
+        // Seul l’utilisateur ou un admin peut supprimer le compte
+        if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
+            return new JsonResponse(['error' => 'Access denied'], 403);
         }
 
         $em->remove($user);
         $em->flush();
 
-        return new JsonResponse(['message' => 'Utilisateur supprimé avec succès'], 200);
+        return new JsonResponse(null, 204);
     }
 }

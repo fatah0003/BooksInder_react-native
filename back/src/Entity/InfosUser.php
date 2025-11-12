@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\InfosUserRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: InfosUserRepository::class)]
 class InfosUser
@@ -12,31 +13,40 @@ class InfosUser
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['infosuser:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 30)]
+    #[Groups(['infosuser:read', 'infosuser:write'])]
     private ?string $userName = null;
 
     #[ORM\Column(length: 20)]
+    #[Groups(['infosuser:read', 'infosuser:write'])]
     private ?string $phoneNumber = null;
 
     #[ORM\Column(length: 50)]
+    #[Groups(['infosuser:read', 'infosuser:write'])]
     private ?string $city = null;
 
     #[ORM\Column]
+    #[Groups(['infosuser:read', 'infosuser:write'])]
     private ?\DateTimeImmutable $birthDate = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(['infosuser:read', 'infosuser:write'])]
     private ?string $bio = null;
 
     #[ORM\Column]
+    #[Groups(['infosuser:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['infosuser:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\OneToOne(inversedBy: 'infosUser', cascade: ['persist', 'remove'])]
     #[ORM\JoinColumn(nullable: false)]
+//    #[Groups(['infosuser:read'])]  // je vais retirer la ligne apres tests !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     private ?User $user = null;
 
     public function getId(): ?int

@@ -9,38 +9,42 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class RegisterController extends AbstractController
 {
-    #[Route('/api/register', name: 'api_register', methods: ['POST'])]
+    #[Route('/api/register', name: 'register', methods: ['POST'])]
     public function register(
         Request $request,
         EntityManagerInterface $em,
-        UserPasswordHasherInterface $passwordHasher
+        UserPasswordHasherInterface $passwordHasher,
+        SerializerInterface $serializer
     ): JsonResponse {
-        $data = json_decode($request->getContent(), true);
+        $jsonContent = $request->getContent();
 
-        // Validation simple (à améliorer plus tard avec un formulaire)
-        if (!isset($data['email'], $data['password'])) {
-            return new JsonResponse(['error' => 'Email et mot de passe requis'], 400);
+        try {
+            /** @var User $user */
+            $user = $serializer->deserialize($jsonContent, User::class, 'json', ['groups' => 'user:write']);
+
+            // Hachage du mot de passe
+            $hashedPassword = $passwordHasher->hashPassword($user, $user->getPassword());
+            $user->setPassword($hashedPassword);
+
+            // Rôle par défaut
+            $user->setRoles(['ROLE_USER']);
+
+            // Dates
+            $user->setCreatedAt(new \DateTimeImmutable());
+            $user->setUpdatedAt(new \DateTimeImmutable());
+
+            $em->persist($user);
+            $em->flush();
+
+            $json = $serializer->serialize($user, 'json', ['groups' => 'user:read']);
+            return new JsonResponse($json, 201, [], true);
+
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Erreur : ' . $e->getMessage()], 500);
         }
-
-        // Vérifie si l’utilisateur existe déjà
-        $existingUser = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
-        if ($existingUser) {
-            return new JsonResponse(['error' => 'Cet email est déjà utilisé'], 400);
-        }
-
-        // Création de l’utilisateur
-        $user = new User();
-        $user->setEmail($data['email']);
-        $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
-        $user->setPassword($hashedPassword);
-        $user->setRoles(['ROLE_USER']);
-
-        $em->persist($user);
-        $em->flush();
-
-        return new JsonResponse(['message' => 'Utilisateur créé avec succès'], 201);
     }
 }
