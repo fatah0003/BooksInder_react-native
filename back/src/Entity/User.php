@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -49,7 +51,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read'])]
     private ?InfosUser $infosUser = null;
 
-    #[ORM\PrePersist] // ✅ s’exécute juste avant le persist
+    #[ORM\PrePersist]
     public function setCreatedAtValue(): void
     {
         if ($this->createdAt === null) {
@@ -58,10 +60,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->updatedAt = new \DateTimeImmutable();
     }
 
-    #[ORM\PreUpdate] // ✅ s’exécute avant chaque update
+    #[ORM\PreUpdate]
     public function setUpdatedAtValue(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
+    #[Groups(['user:read'])]
+    private Collection $books;
+
+    public function __construct()
+    {
+        $this->books = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -170,6 +181,32 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         $this->infosUser = $infosUser;
 
+        return $this;
+    }
+
+    public function getBooks(): Collection
+    {
+        return $this->books;
+    }
+
+// ajouter un livre
+    public function addBook(Book $book): static
+    {
+        if (!$this->books->contains($book)) {
+            $this->books->add($book);
+            $book->setUser($this);
+        }
+        return $this;
+    }
+
+// supprimer un livre
+    public function removeBook(Book $book): static
+    {
+        if ($this->books->removeElement($book)) {
+            if ($book->getUser() === $this) {
+                $book->setUser(null);
+            }
+        }
         return $this;
     }
 }

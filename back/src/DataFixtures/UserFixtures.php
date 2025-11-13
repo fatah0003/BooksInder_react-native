@@ -18,21 +18,21 @@ class UserFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        // Admin user
         $admin = new User();
-        $admin->setEmail('admin@example.com');
-        $admin->setRoles(['ROLE_ADMIN']);
-        $admin->setPassword($this->hasher->hashPassword($admin, 'admin123'));
-        $admin->setCreatedAt(new \DateTimeImmutable());
+        $admin->setEmail('admin@example.com')
+            ->setRoles(['ROLE_ADMIN'])
+            ->setPassword($this->hasher->hashPassword($admin, 'admin123'))
+            ->setCreatedAt(new \DateTimeImmutable());
         $manager->persist($admin);
+        $this->addReference('user_admin', $admin); // <-- référence
 
-        // Regular user
         $user = new User();
-        $user->setEmail('user@example.com');
-        $user->setRoles(['ROLE_USER']);
-        $user->setPassword($this->hasher->hashPassword($user, 'user123'));
-        $user->setCreatedAt(new \DateTimeImmutable());
+        $user->setEmail('user@example.com')
+            ->setRoles(['ROLE_USER'])
+            ->setPassword($this->hasher->hashPassword($user, 'user123'))
+            ->setCreatedAt(new \DateTimeImmutable());
         $manager->persist($user);
+        $this->addReference('user_regular', $user);
 
         $manager->flush();
     }
