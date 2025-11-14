@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Enum\UserStatusEnum;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -10,6 +11,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class RegisterController extends AbstractController
 {
@@ -18,31 +20,40 @@ class RegisterController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         UserPasswordHasherInterface $passwordHasher,
-        SerializerInterface $serializer
+        SerializerInterface $serializer,
+        ValidatorInterface $validator
     ): JsonResponse {
-        $jsonContent = $request->getContent();
-
         try {
             /** @var User $user */
-            $user = $serializer->deserialize($jsonContent, User::class, 'json', ['groups' => 'user:write']);
+            $user = $serializer->deserialize(
+                $request->getContent(),
+                User::class,
+                'json',
+                ['groups' => 'user:write']
+            );
 
-            // Hachage du mot de passe
-            $hashedPassword = $passwordHasher->hashPassword($user, $user->getPassword());
-            $user->setPassword($hashedPassword);
+            $user
+                ->setPassword($passwordHasher->hashPassword($user, $user->getPassword()))
+                ->setRoles(['ROLE_USER'])
+                ->setUserStatus(UserStatusEnum::ACTIVE);
 
-            // Rôle par défaut
-            $user->setRoles(['ROLE_USER']);
-
-            // Dates
-            $user->setCreatedAt(new \DateTimeImmutable());
-            $user->setUpdatedAt(new \DateTimeImmutable());
+            // Validation
+            $errors = $validator->validate($user);
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+                }
+                return $this->json(['errors' => $errorMessages], 400);
+            }
 
             $em->persist($user);
             $em->flush();
+
             return $this->json($user, 201, [], ['groups' => 'user:read']);
 
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur : ' . $e->getMessage()], 500);
+            return $this->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
         }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\UserStatusEnum;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -69,6 +70,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
     #[Groups(['user:read'])]
     private Collection $books;
+
+    #[ORM\Column(enumType: UserStatusEnum::class)]
+    private ?UserStatusEnum $userStatus = null;
 
     public function __construct()
     {
@@ -207,6 +211,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
                 $book->setUser(null);
             }
         }
+        return $this;
+    }
+
+    public function getUserStatus(): ?UserStatusEnum
+    {
+        return $this->userStatus;
+    }
+
+    public function setUserStatus(UserStatusEnum $userStatus): static
+    {
+        $this->userStatus = $userStatus;
+
         return $this;
     }
 }
