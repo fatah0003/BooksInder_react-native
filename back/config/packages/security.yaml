@@ -32,20 +32,27 @@ security:
             pattern: ^/api
             stateless: true
             provider: app_user_provider
+            lazy: true
             jwt: ~
 
-    # Contrôle d'accès
     access_control:
-        # Routes publiques (login + inscription)
+        # --- ROUTES PUBLIQUES ---
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
-#        - { path: ^/api/users$, roles: PUBLIC_ACCESS }
-#        - { path: ^/api/users/1$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/books, roles: PUBLIC_ACCESS }
-        - { path: ^/api/infosuser, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/books$, roles: PUBLIC_ACCESS }          # liste de tous les livres
+        - { path: ^/api/books/\d+$, roles: PUBLIC_ACCESS }      # détail d'un livre
 
-        # Toutes les autres routes API nécessitent une authentification
+        # --- ADMIN : liste complète des users ---
+        - { path: ^/api/users$, roles: ROLE_ADMIN }
+
+        # --- ROUTES QUI DOIVENT ÊTRE PRIVÉES ---
+        - { path: ^/api/users/\d+$, roles: IS_AUTHENTICATED_FULLY }      # profil d'un user
+        - { path: ^/api/books/user/\d+$, roles: IS_AUTHENTICATED_FULLY } # livres d'un user
+
+        # --- TOUT LE RESTE REQUIERT AUTHENTIFICATION ---
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+
 
 when@test:
     security:

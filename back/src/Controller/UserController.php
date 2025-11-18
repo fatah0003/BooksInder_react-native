@@ -21,15 +21,17 @@ class UserController extends AbstractController
     #[IsGranted('ROLE_ADMIN')]
     public function index(UserRepository $repo): JsonResponse
     {
-        $users = $repo->findAll();
-        return $this->json($users, 200, [], ['groups' => 'user:read']);
+        return $this->json(
+            $repo->findAll(),
+            200,
+            [],
+            ['groups' => 'user:read']
+        );
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function show(User $user): JsonResponse
     {
-        // Un utilisateur ne peut voir que ses propres infos sauf s’il est admin
         if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
             return $this->json(['error' => 'Access denied'], 403);
         }
@@ -38,7 +40,6 @@ class UserController extends AbstractController
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function update(
         Request $request,
         User $user,
@@ -46,22 +47,26 @@ class UserController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         SerializerInterface $serializer
     ): JsonResponse {
+
         if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
             return $this->json(['error' => 'Access denied'], 403);
         }
 
         try {
+            $data = $request->toArray();
+
+            unset($data['roles']);
+
             $serializer->deserialize(
-                $request->getContent(),
+                json_encode($data),
                 User::class,
                 'json',
                 ['object_to_populate' => $user, 'groups' => 'user:write']
             );
 
-            // Si un mot de passe est envoyé, on le rehash
-            if (!empty($user->getPassword())) {
+            if (!empty($data['password'])) {
                 $user->setPassword(
-                    $passwordHasher->hashPassword($user, $user->getPassword())
+                    $passwordHasher->hashPassword($user, $data['password'])
                 );
             }
 
@@ -69,13 +74,13 @@ class UserController extends AbstractController
             $em->flush();
 
             return $this->json($user, 200, [], ['groups' => 'user:read']);
+
         } catch (NotEncodableValueException $e) {
             return $this->json(['error' => 'Invalid JSON format'], 400);
         }
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
-    #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function delete(User $user, EntityManagerInterface $em): JsonResponse
     {
         if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
