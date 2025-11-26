@@ -35,9 +35,15 @@ class BookRepository extends ServiceEntityRepository
 //        }
 
         if (isset($filters['category'])) {
-            $qb->andWhere('JSON_CONTAINS(b.categorie, :category) = 1')
-                ->setParameter('category', json_encode($filters['category']));
+            $qb->andWhere('b.categorie LIKE :cat')
+                ->setParameter('cat', '%' . $filters['category'] . '%');
         }
+
+        if (isset($filters['availableExchangeType'])) {
+            $qb->andWhere('b.availableExchangeTypes LIKE :exchangeType')
+                ->setParameter('exchangeType', '%' . $filters['availableExchangeType'] . '%');
+        }
+
 
         if (isset($filters['state'])) {
             $qb->andWhere('b.state = :state')
@@ -87,9 +93,16 @@ class BookRepository extends ServiceEntityRepository
 //        }
 
         if (isset($filters['category'])) {
-            $qb->andWhere('CONTAINS(b.categorie, :category) = true')
-                ->setParameter('category', $filters['category']);
+            $qb->andWhere('b.categorie LIKE :cat')
+                ->setParameter('cat', '%' . $filters['category'] . '%');
         }
+
+
+        if (isset($filters['availableExchangeType'])) {
+            $qb->andWhere('b.availableExchangeTypes LIKE :exchangeType')
+                ->setParameter('exchangeType', '%' . $filters['availableExchangeType'] . '%');
+        }
+
 
         if (isset($filters['state'])) {
             $qb->andWhere('b.state = :state')

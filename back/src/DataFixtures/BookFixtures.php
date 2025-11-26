@@ -6,6 +6,7 @@ use App\Entity\Book;
 use App\Entity\User;
 use App\Enum\BookCategorieEnum;
 use App\Enum\BookStatusEnum;
+use App\Enum\ExchangeTypeEnum;
 use App\Enum\StateEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
@@ -32,11 +33,24 @@ class BookFixtures extends Fixture implements DependentFixtureInterface
                 ->setBookStatus(BookStatusEnum::ACTIVE)
                 ->setUser($i % 2 === 0 ? $admin : $user);
 
+            // Types d’échange selon l’index
+            if ($i <= 3) {
+                $book->setAvailableExchangeTypes([ExchangeTypeEnum::TEMPORARY]);
+            } elseif ($i <= 6) {
+                $book->setAvailableExchangeTypes([ExchangeTypeEnum::PERMANENT]);
+            } else {
+                $book->setAvailableExchangeTypes([
+                    ExchangeTypeEnum::TEMPORARY,
+                    ExchangeTypeEnum::PERMANENT
+                ]);
+            }
+
             $manager->persist($book);
         }
 
         $manager->flush();
     }
+
 
     public function getDependencies(): array
     {

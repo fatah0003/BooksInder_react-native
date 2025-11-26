@@ -36,6 +36,7 @@ class BookController extends AbstractController
      * - limit: nombre d'items par page (default: 10, max: 100)
      * - userId: filtrer par utilisateur (plutard pour l'admin)
      * - category: filtrer par catégorie
+     * - availableExchangeType : filtrer par type d'échange(définif ou temporaire)
      * - state: filtrer par état (NEW, LIKE_NEW, GOOD, etc.)
      * - status: filtrer par statut (ACTIVE, INACTIVE, etc.)
      * - location: filtrer par localisation
@@ -59,6 +60,10 @@ class BookController extends AbstractController
 
         if ($category = $request->query->get('category')) {
             $filters['category'] = $category;
+        }
+
+        if ($availableExchangeType = $request->query->get('availableExchangeType')) {
+            $filters['availableExchangeType'] = $availableExchangeType;
         }
 
         if ($state = $request->query->get('state')) {
@@ -140,17 +145,17 @@ class BookController extends AbstractController
             ], 500);
         }
     }
-
-    #[Route('/user/{id}', name: 'list_books_by_user', methods: ['GET'])]
-    public function listBooksByUser(User $user): JsonResponse
-    {
-        return $this->json(
-            $user->getBooks(),
-            200,
-            [],
-            ['groups' => 'book:read']
-        );
-    }
+// récupérer tout les livres d'un user, à enlever plutard, et gerer ça dans exchangeController
+//    #[Route('/user/{id}', name: 'list_books_by_user', methods: ['GET'])]
+//    public function listBooksByUser(User $user): JsonResponse
+//    {
+//        return $this->json(
+//            $user->getBooks(),
+//            200,
+//            [],
+//            ['groups' => 'book:read']
+//        );
+//    }
 
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     public function show(Book $book): JsonResponse

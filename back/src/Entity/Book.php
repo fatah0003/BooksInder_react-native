@@ -4,8 +4,11 @@ namespace App\Entity;
 
 use App\Enum\BookCategorieEnum;
 use App\Enum\BookStatusEnum;
+use App\Enum\ExchangeTypeEnum;
 use App\Enum\StateEnum;
 use App\Repository\BookRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -72,6 +75,16 @@ class Book
     #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?BookStatusEnum $bookStatus = null;
 
+    #[ORM\Column(type: Types::SIMPLE_ARRAY, enumType: ExchangeTypeEnum::class)]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
+    private array $availableExchangeTypes = [];
+
+//    /**
+//     * @var Collection<int, Exchange>
+//     */
+//    #[ORM\OneToMany(targetEntity: Exchange::class, mappedBy: 'bookOne')]
+//    private Collection $exchagedBook;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -79,6 +92,7 @@ class Book
         $this->categorie = [BookCategorieEnum::FICTION]; // valeur par défaut pour éviter une erreur d’énumération vide
         $this->state = StateEnum::GOOD;
         $this->bookStatus = BookStatusEnum::ACTIVE;
+//        $this->exchagedBook = new ArrayCollection();
     }
 
     public function getId(): ?int { return $this->id; }
@@ -112,4 +126,49 @@ class Book
 
     public function getBookStatus(): ?BookStatusEnum { return $this->bookStatus; }
     public function setBookStatus(BookStatusEnum $bookStatus): static { $this->bookStatus = $bookStatus; return $this; }
+
+    /**
+     * @return Collection<int, Exchange>
+     */
+//    public function getExchagedBook(): Collection
+//    {
+//        return $this->exchagedBook;
+//    }
+
+//    public function addExchagedBook(Exchange $exchagedBook): static
+//    {
+//        if (!$this->exchagedBook->contains($exchagedBook)) {
+//            $this->exchagedBook->add($exchagedBook);
+//            $exchagedBook->setBookOne($this);
+//        }
+
+//        return $this;
+//    }
+
+//    public function removeExchagedBook(Exchange $exchagedBook): static
+//    {
+//        if ($this->exchagedBook->removeElement($exchagedBook)) {
+//            // set the owning side to null (unless already changed)
+//            if ($exchagedBook->getBookOne() === $this) {
+//                $exchagedBook->setBookOne(null);
+//            }
+//        }
+//
+//        return $this;
+//    }
+
+/**
+ * @return ExchangeTypeEnum[]
+ */
+public function getAvailableExchangeTypes(): array
+{
+    return $this->availableExchangeTypes;
+}
+
+public function setAvailableExchangeTypes(array $availableExchangeTypes): static
+{
+    $this->availableExchangeTypes = $availableExchangeTypes;
+
+    return $this;
+}
 }

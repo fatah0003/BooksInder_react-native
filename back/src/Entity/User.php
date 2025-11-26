@@ -74,9 +74,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(enumType: UserStatusEnum::class)]
     private ?UserStatusEnum $userStatus = null;
 
+    /**
+     * @var Collection<int, Exchange>
+     */
+    #[ORM\OneToMany(targetEntity: Exchange::class, mappedBy: 'userRequester')]
+    private Collection $exchangeRequest;
+
+    /**
+     * @var Collection<int, Exchange>
+     */
+    #[ORM\OneToMany(targetEntity: Exchange::class, mappedBy: 'userReceiver')]
+    private Collection $exchangeReceive;
+
     public function __construct()
     {
         $this->books = new ArrayCollection();
+        $this->exchangeRequest = new ArrayCollection();
+        $this->exchangeReceive = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -222,6 +236,66 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setUserStatus(UserStatusEnum $userStatus): static
     {
         $this->userStatus = $userStatus;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Exchange>
+     */
+    public function getExchangeRequest(): Collection
+    {
+        return $this->exchangeRequest;
+    }
+
+    public function addExchangeRequest(Exchange $exchangeRequest): static
+    {
+        if (!$this->exchangeRequest->contains($exchangeRequest)) {
+            $this->exchangeRequest->add($exchangeRequest);
+            $exchangeRequest->setUserRequester($this);
+        }
+
+        return $this;
+    }
+
+    public function removeExchangeRequest(Exchange $exchangeRequest): static
+    {
+        if ($this->exchangeRequest->removeElement($exchangeRequest)) {
+            // set the owning side to null (unless already changed)
+            if ($exchangeRequest->getUserRequester() === $this) {
+                $exchangeRequest->setUserRequester(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Exchange>
+     */
+    public function getExchangeReceive(): Collection
+    {
+        return $this->exchangeReceive;
+    }
+
+    public function addExchangeReceive(Exchange $exchangeReceive): static
+    {
+        if (!$this->exchangeReceive->contains($exchangeReceive)) {
+            $this->exchangeReceive->add($exchangeReceive);
+            $exchangeReceive->setUserReceiver($this);
+        }
+
+        return $this;
+    }
+
+    public function removeExchangeReceive(Exchange $exchangeReceive): static
+    {
+        if ($this->exchangeReceive->removeElement($exchangeReceive)) {
+            // set the owning side to null (unless already changed)
+            if ($exchangeReceive->getUserReceiver() === $this) {
+                $exchangeReceive->setUserReceiver(null);
+            }
+        }
 
         return $this;
     }
