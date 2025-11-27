@@ -359,7 +359,7 @@ class ExchangeController extends AbstractController
                 'title' => $book->getTitle(),
                 'author' => $book->getAuthor(),
                 'isbn' => $book->getIsbn(),
-                'coverImage' => $book->getCoverImage(),
+//                'coverImage' => $book->getCoverImage(),
             ], $books)
         ]);
     }
@@ -380,35 +380,35 @@ class ExchangeController extends AbstractController
                 'id' => $exchange->getBookOne()->getId(),
                 'title' => $exchange->getBookOne()->getTitle(),
                 'author' => $exchange->getBookOne()->getAuthor(),
-                'coverImage' => $exchange->getBookOne()->getCoverImage(),
+//                'coverImage' => $exchange->getBookOne()->getCoverImage(),
             ],
             'bookTwo' => $exchange->getBookTwo() ? [
                 'id' => $exchange->getBookTwo()->getId(),
                 'title' => $exchange->getBookTwo()->getTitle(),
                 'author' => $exchange->getBookTwo()->getAuthor(),
-                'coverImage' => $exchange->getBookTwo()->getCoverImage(),
+//                'coverImage' => $exchange->getBookTwo()->getCoverImage(),
             ] : null,
         ];
 
         if ($detailed) {
             $data['userRequester'] = [
                 'id' => $exchange->getUserRequester()->getId(),
-                'username' => $exchange->getUserRequester()->getUsername(),
+//                'username' => $exchange->getUserRequester()->getUsername(),
                 'email' => $exchange->getUserRequester()->getEmail(),
             ];
             $data['userReceiver'] = [
                 'id' => $exchange->getUserReceiver()->getId(),
-                'username' => $exchange->getUserReceiver()->getUsername(),
+//                'username' => $exchange->getUserReceiver()->getUsername(),
                 'email' => $exchange->getUserReceiver()->getEmail(),
             ];
         } else {
             $data['userRequester'] = [
                 'id' => $exchange->getUserRequester()->getId(),
-                'username' => $exchange->getUserRequester()->getUsername(),
+//                'username' => $exchange->getUserRequester()->getUsername(),
             ];
             $data['userReceiver'] = [
                 'id' => $exchange->getUserReceiver()->getId(),
-                'username' => $exchange->getUserReceiver()->getUsername(),
+//                'username' => $exchange->getUserReceiver()->getUsername(),
             ];
         }
 
