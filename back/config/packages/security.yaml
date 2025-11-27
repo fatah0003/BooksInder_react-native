@@ -49,6 +49,7 @@ security:
         - { path: ^/api/users/\d+$, roles: IS_AUTHENTICATED_FULLY }      # profil d'un user
         - { path: ^/api/books/user/\d+$, roles: IS_AUTHENTICATED_FULLY } # livres d'un user
         - { path: ^/api/exchanges, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/favorites, roles: IS_AUTHENTICATED_FULLY }
 
         # --- TOUT LE RESTE REQUIERT AUTHENTIFICATION ---
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
