@@ -9,6 +9,7 @@ use App\Enum\ExchangeTypeEnum;
 use App\Enum\BookStatusEnum;
 use App\Repository\ExchangeRepository;
 use App\Repository\BookRepository;
+use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,7 +25,8 @@ class ExchangeController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private ExchangeRepository $exchangeRepository,
-        private BookRepository $bookRepository
+        private BookRepository $bookRepository,
+        private NotificationService $notificationService
     ) {}
 
     /**
@@ -71,6 +73,11 @@ class ExchangeController extends AbstractController
         $exchange->setCreatedAt(new \DateTimeImmutable());
 
         $this->em->persist($exchange);
+
+
+        // créer notif pour le propriétaire
+        $this->notificationService->notifyExchangeRequestReceived($exchange);
+
         $this->em->flush();
 
         return $this->json([
@@ -144,6 +151,11 @@ class ExchangeController extends AbstractController
                 $exchange->getBookOne()->setBookStatus(BookStatusEnum::UNAVAILABLE);
                 $bookTwo->setBookStatus(BookStatusEnum::UNAVAILABLE);
             });
+
+            $this->notificationService->notifyExchangeAccepted($exchange);
+
+            $this->em->flush();
+
         } catch (\Exception $e) {
             return $this->json([
                 'error' => 'Erreur lors de la validation de l\'échange',
@@ -181,6 +193,10 @@ class ExchangeController extends AbstractController
 
         $exchange->setStatus(ExchangeStatusEnum::REJECTED);
         $exchange->setRefusedAt(new \DateTimeImmutable());
+
+
+
+        $this->notificationService->notifyExchangeRejected($exchange);
 
         $this->em->flush();
 
@@ -222,6 +238,10 @@ class ExchangeController extends AbstractController
                     if ($exchange->getBookTwo()) {
                         $exchange->getBookTwo()->setBookStatus(BookStatusEnum::ACTIVE);
                     }
+                }
+
+                if ($exchange->getStatus() === ExchangeStatusEnum::PENDING) {
+                    $this->notificationService->notifyExchangeCancelled($exchange);
                 }
 
                 // Supprimer l'échange
