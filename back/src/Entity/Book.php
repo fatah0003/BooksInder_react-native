@@ -89,7 +89,7 @@ class Book
     {
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
-        $this->categorie = [BookCategorieEnum::FICTION]; // valeur par défaut pour éviter une erreur d’énumération vide
+//        $this->categorie = [BookCategorieEnum::FICTION]; // valeur par défaut pour éviter une erreur d’énumération vide
         $this->state = StateEnum::GOOD;
         $this->bookStatus = BookStatusEnum::ACTIVE;
 //        $this->exchagedBook = new ArrayCollection();

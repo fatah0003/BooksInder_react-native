@@ -2,217 +2,195 @@
 
 namespace App\Controller;
 
+use App\DTO\Book\CreateBookDTO;
+use App\DTO\Book\UpdateBookDTO;
 use App\Entity\Book;
-use App\Entity\User;
-use App\Repository\BookRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\BookService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/api/books', name: 'api_books_')]
 class BookController extends AbstractController
 {
-    private const MAX_LIMIT = 100;
-    private const DEFAULT_LIMIT = 10;
-    private const CACHE_TTL = 300; // 5 minutes
-
     public function __construct(
-        private readonly LoggerInterface $logger,
-        private readonly CacheInterface $cache,
+        private readonly BookService $bookService,
+        private readonly SerializerInterface $serializer,
+        private readonly ValidatorInterface $validator,
+        private readonly LoggerInterface $logger
     ) {}
 
     /**
      * Liste paginée avec filtres
      *
      * Query params:
-     * - page: numéro de page (default: 1)
-     * - limit: nombre d'items par page (default: 10, max: 100)
-     * - userId: filtrer par utilisateur (plutard pour l'admin)
-     * - category: filtrer par catégorie
-     * - availableExchangeType : filtrer par type d'échange(définif ou temporaire)
-     * - state: filtrer par état (NEW, LIKE_NEW, GOOD, etc.)
-     * - status: filtrer par statut (ACTIVE, INACTIVE, etc.)
-     * - location: filtrer par localisation
-     * - search: recherche textuelle (title, author, ISBN)
-     * - orderBy: champ de tri (default: createdAt)
-     * - order: direction du tri (ASC/DESC, default: DESC)
+     * - page, limit, category, availableExchangeType, state, status, location, search, orderBy, order
      */
     #[Route('', name: 'list', methods: ['GET'])]
-    public function list(Request $request, BookRepository $bookRepository): JsonResponse
+    public function list(Request $request): JsonResponse
     {
-        // Validation et normalisation des paramètres
-        $page = max(1, (int) $request->query->get('page', 1));
-        $limit = min(self::MAX_LIMIT, max(1, (int) $request->query->get('limit', self::DEFAULT_LIMIT)));
-
-        // Construction des filtres
-        $filters = [];
-
-//        if ($userId = $request->query->get('userId')) {
-//            $filters['userId'] = (int) $userId;
-//        }    --à remttre plutard
-
-        if ($category = $request->query->get('category')) {
-            $filters['category'] = $category;
-        }
-
-        if ($availableExchangeType = $request->query->get('availableExchangeType')) {
-            $filters['availableExchangeType'] = $availableExchangeType;
-        }
-
-        if ($state = $request->query->get('state')) {
-            $filters['state'] = $state;
-        }
-
-        if ($status = $request->query->get('status')) {
-            $filters['status'] = $status;
-        }
-
-        if ($location = $request->query->get('location')) {
-            $filters['location'] = $location;
-        }
-
-        if ($search = $request->query->get('search')) {
-            $filters['search'] = trim($search);
-        }
-
-        $orderBy = $request->query->get('orderBy', 'createdAt');
-        $order = strtoupper($request->query->get('order', 'DESC'));
-
-        // Validation des champs de tri autorisés
-        $allowedOrderBy = ['id', 'title', 'author', 'createdAt', 'updatedAt', 'pages'];
-        if (!in_array($orderBy, $allowedOrderBy)) {
-            $orderBy = 'createdAt';
-        }
-
-        if (!in_array($order, ['ASC', 'DESC'])) {
-            $order = 'DESC';
-        }
-
-        $filters['orderBy'] = $orderBy;
-        $filters['order'] = $order;
-
         try {
-            // Récupération des livres avec filtres
-            $books = $bookRepository->findPaginated($page, $limit, $filters);
+            $params = $this->bookService->buildQueryParams($request->query->all());
 
-            // Cache du count total pour éviter les requêtes répétées
-            $cacheKey = 'books_count_' . md5(serialize($filters));
-            $totalItems = $this->cache->get($cacheKey, function (ItemInterface $item) use ($bookRepository, $filters) {
-                $item->expiresAfter(self::CACHE_TTL);
-                return $bookRepository->countWithFilters($filters);
-            });
+            $response = $this->bookService->getPaginatedBooks(
+                $params['page'],
+                $params['limit'],
+                $params['filters']
+            );
 
-            $totalPages = (int) ceil($totalItems / $limit);
-            $hasNextPage = $page < $totalPages;
-            $hasPreviousPage = $page > 1;
-
-            return $this->json([
-                'success' => true,
-                'data' => $books,
-                'pagination' => [
-                    'currentPage' => $page,
-                    'itemsPerPage' => $limit,
-                    'totalItems' => $totalItems,
-                    'totalPages' => $totalPages,
-                    'hasNextPage' => $hasNextPage,
-                    'hasPreviousPage' => $hasPreviousPage,
-                    'nextPage' => $hasNextPage ? $page + 1 : null,
-                    'previousPage' => $hasPreviousPage ? $page - 1 : null,
-                ],
-                'filters' => array_filter($filters, fn($key) => !in_array($key, ['orderBy', 'order']), ARRAY_FILTER_USE_KEY),
-                'sort' => [
-                    'orderBy' => $orderBy,
-                    'order' => $order,
-                ],
-            ], 200, [], ['groups' => 'book:read']);
+            return $this->json($response, 200, [], ['groups' => 'book:read']);
 
         } catch (\Exception $e) {
-            $this->logger->error('Erreur lors de la récupération des livres', [
-                'error' => $e->getMessage(),
-                'filters' => $filters,
-            ]);
+            $this->logger->error('Erreur liste livres', ['error' => $e->getMessage()]);
 
             return $this->json([
                 'success' => false,
-                'error' => 'Une erreur est survenue lors de la récupération des livres',
-            ], 500);
+                'error' => 'Une erreur est survenue lors de la récupération des livres'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-// récupérer tout les livres d'un user, à enlever plutard, et gerer ça dans exchangeController
-//    #[Route('/user/{id}', name: 'list_books_by_user', methods: ['GET'])]
-//    public function listBooksByUser(User $user): JsonResponse
-//    {
-//        return $this->json(
-//            $user->getBooks(),
-//            200,
-//            [],
-//            ['groups' => 'book:read']
-//        );
-//    }
 
+    /**
+     * Afficher un livre
+     */
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     public function show(Book $book): JsonResponse
     {
-        return $this->json($book, 200, [], ['groups' => 'book:read']);
+        return $this->json([
+            'success' => true,
+            'data' => $book
+        ], 200, [], ['groups' => 'book:read']);
     }
 
+    /**
+     * Créer un livre
+     */
     #[Route('', name: 'create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
+    public function create(Request $request): JsonResponse
     {
-        $book = $serializer->deserialize(
-            $request->getContent(),
-            Book::class,
-            'json',
-            ['groups' => 'book:write']
-        );
+        try {
+            /** @var CreateBookDTO $dto */
+            $dto = $this->serializer->deserialize(
+                $request->getContent(),
+                CreateBookDTO::class,
+                'json'
+            );
 
-        $book->setCreatedAt(new \DateTimeImmutable());
-        $book->setUpdatedAt(new \DateTimeImmutable());
-        $book->setUser($this->getUser());
+            // Validation
+            $errors = $this->validator->validate($dto);
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+                }
+                return $this->json([
+                    'success' => false,
+                    'errors' => $errorMessages
+                ], Response::HTTP_BAD_REQUEST);
+            }
 
-        $em->persist($book);
-        $em->flush();
+            $book = $this->bookService->createBook($this->getUser(), $dto);
 
-        return $this->json($book, 201, [], ['groups' => 'book:read']);
+            return $this->json([
+                'success' => true,
+                'message' => 'Livre créé avec succès',
+                'data' => $book
+            ], Response::HTTP_CREATED, [], ['groups' => 'book:read']);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur création livre', ['error' => $e->getMessage()]);
+
+            return $this->json([
+                'success' => false,
+                'error' => 'Une erreur est survenue lors de la création du livre'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
+    /**
+     * Mettre à jour un livre
+     */
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
-    public function update(Request $request, Book $book, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse
+    public function update(Request $request, Book $book): JsonResponse
     {
-        if ($book->getUser() !== $this->getUser() && !$this->isGranted('ROLE_ADMIN')) {
-            return $this->json(['error' => 'Access denied'], 403);
+        try {
+            /** @var UpdateBookDTO $dto */
+            $dto = $this->serializer->deserialize(
+                $request->getContent(),
+                UpdateBookDTO::class,
+                'json'
+            );
+
+            // Validation
+            $errors = $this->validator->validate($dto);
+            if (count($errors) > 0) {
+                $errorMessages = [];
+                foreach ($errors as $error) {
+                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
+                }
+                return $this->json([
+                    'success' => false,
+                    'errors' => $errorMessages
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $book = $this->bookService->updateBook($book, $this->getUser(), $dto);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Livre mis à jour avec succès',
+                'data' => $book
+            ], 200, [], ['groups' => 'book:read']);
+
+        } catch (AccessDeniedHttpException $e) {
+            return $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], Response::HTTP_FORBIDDEN);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur mise à jour livre', ['error' => $e->getMessage()]);
+
+            return $this->json([
+                'success' => false,
+                'error' => 'Une erreur est survenue lors de la mise à jour du livre'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $serializer->deserialize(
-            $request->getContent(),
-            Book::class,
-            'json',
-            ['object_to_populate' => $book, 'groups' => 'book:write']
-        );
-
-        $book->setUpdatedAt(new \DateTimeImmutable());
-        $em->flush();
-
-        return $this->json($book, 200, [], ['groups' => 'book:read']);
     }
 
+    /**
+     * Supprimer un livre
+     */
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
-    public function delete(Book $book, EntityManagerInterface $em): JsonResponse
+    public function delete(Book $book): JsonResponse
     {
-        if ($book->getUser() !== $this->getUser() && !$this->isGranted('ROLE_ADMIN')) {
-            return $this->json(['error' => 'Access denied'], 403);
+        try {
+            $this->bookService->deleteBook($book, $this->getUser());
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Livre supprimé avec succès'
+            ]);
+
+        } catch (AccessDeniedHttpException $e) {
+            return $this->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], Response::HTTP_FORBIDDEN);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur suppression livre', ['error' => $e->getMessage()]);
+
+            return $this->json([
+                'success' => false,
+                'error' => 'Une erreur est survenue lors de la suppression du livre'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $em->remove($book);
-        $em->flush();
-
-        return $this->json(null, 204);
     }
 }
