@@ -2,58 +2,41 @@
 
 namespace App\Controller;
 
-use App\Entity\User;
-use App\Enum\UserStatusEnum;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Routing\Annotation\Route;
+use App\DTO\User\CreateUserDTO;
+use App\Service\UserService;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class RegisterController extends AbstractController
 {
+    public function __construct(
+        private readonly UserService $userService,
+        private readonly SerializerInterface $serializer,
+        private readonly LoggerInterface $logger
+    ) {}
+
     #[Route('/api/register', name: 'register', methods: ['POST'])]
-    public function register(
-        Request $request,
-        EntityManagerInterface $em,
-        UserPasswordHasherInterface $passwordHasher,
-        SerializerInterface $serializer,
-        ValidatorInterface $validator
-    ): JsonResponse {
+    public function register(Request $request): JsonResponse
+    {
         try {
-            /** @var User $user */
-            $user = $serializer->deserialize(
-                $request->getContent(),
-                User::class,
-                'json',
-                ['groups' => 'user:write']
-            );
+            /** @var CreateUserDTO $dto */
+            $dto = $this->serializer->deserialize($request->getContent(), CreateUserDTO::class, 'json');
 
-            $user
-                ->setPassword($passwordHasher->hashPassword($user, $user->getPassword()))
-                ->setRoles(['ROLE_USER'])
-                ->setUserStatus(UserStatusEnum::ACTIVE);
-
-            // Validation
-            $errors = $validator->validate($user);
-            if (count($errors) > 0) {
-                $errorMessages = [];
-                foreach ($errors as $error) {
-                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
-                }
-                return $this->json(['errors' => $errorMessages], 400);
-            }
-
-            $em->persist($user);
-            $em->flush();
+            $user = $this->userService->createFromDTO($dto);
 
             return $this->json($user, 201, [], ['groups' => 'user:read']);
-
+        } catch (\Symfony\Component\HttpKernel\Exception\BadRequestHttpException $e) {
+            // DTO validation / business error from service
+            $this->logger->warning('Register validation error', ['msg' => $e->getMessage()]);
+            $payload = json_decode($e->getMessage(), true);
+            return $this->json(['success' => false, 'errors' => $payload ?: $e->getMessage()], 400);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Erreur : ' . $e->getMessage()], 500);
+            $this->logger->error('Register failed', ['error' => $e->getMessage()]);
+            return $this->json(['success' => false, 'error' => 'Erreur serveur'], 500);
         }
     }
 }

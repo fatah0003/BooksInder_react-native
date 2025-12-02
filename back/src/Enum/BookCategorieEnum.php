@@ -6,6 +6,6 @@ enum BookCategorieEnum: string
 {
     case PHILOSOPHY = 'philosophy';
     case FICTION = 'fiction';
-    case HiSTORICAL = 'Historical';
+    case HISTORICAL = 'Historical';
     case SCIENCE_FICTION = 'science_fiction';
 }
