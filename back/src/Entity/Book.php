@@ -19,27 +19,27 @@ class Book
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['book:read', 'user:read'])]
+    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?string $title = null;
 
     #[ORM\Column(length: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?string $author = null;
 
     #[ORM\Column(length: 20)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?string $isbn = null;
 
     #[ORM\Column(type: Types::TEXT)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?string $description = null;
 
     #[ORM\Column]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?int $pages = null;
 
     #[ORM\Column]
@@ -56,27 +56,27 @@ class Book
     private ?User $user = null;
 
     #[ORM\Column(length: 40, nullable: true)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?string $edition = null;
 
     #[ORM\Column(length: 50)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?string $location = null;
 
     #[ORM\Column(type: Types::SIMPLE_ARRAY, enumType: BookCategorieEnum::class)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private array $categorie = [];
 
     #[ORM\Column(enumType: StateEnum::class)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?StateEnum $state = null;
 
     #[ORM\Column(enumType: BookStatusEnum::class)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?BookStatusEnum $bookStatus = null;
 
     #[ORM\Column(type: Types::SIMPLE_ARRAY, enumType: ExchangeTypeEnum::class)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private array $availableExchangeTypes = [];
 
 //    /**

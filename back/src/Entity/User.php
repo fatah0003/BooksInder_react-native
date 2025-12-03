@@ -21,18 +21,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'exchange:read', 'exchange:detail', 'book:read:detail'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
-    #[Groups(['user:read', 'user:write'])]
+    #[Groups(['user:read', 'user:write', 'exchange:detail', 'book:read:detail'])]
     private ?string $email = null;
 
     /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
-    #[Groups(['user:read', 'user:write'])]
+    #[Groups(['user:read'])]
     private array $roles = [];
 
     /**
@@ -54,26 +54,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read'])]
     private ?InfosUser $infosUser = null;
 
-    #[ORM\PrePersist]
-    public function setCreatedAtValue(): void
-    {
-        if ($this->createdAt === null) {
-            $this->createdAt = new \DateTimeImmutable();
-        }
-        $this->updatedAt = new \DateTimeImmutable();
-    }
-
-    #[ORM\PreUpdate]
-    public function setUpdatedAtValue(): void
-    {
-        $this->updatedAt = new \DateTimeImmutable();
-    }
-
     #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
-    #[Groups(['user:read'])]
+
+        // Si on veut les livres d'un user => requête dédiée
+        // #[Groups(['user:read'])]
     private Collection $books;
 
     #[ORM\Column(enumType: UserStatusEnum::class)]
+    #[Groups(['user:read'])]
     private ?UserStatusEnum $userStatus = null;
 
     /**
@@ -338,4 +326,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+    #[ORM\PrePersist]
+    public function onPrePersist(): void
+    {
+        if ($this->createdAt === null) {
+            $this->createdAt = new \DateTimeImmutable();
+        }
+
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    #[ORM\PreUpdate]
+    public function onPreUpdate(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
+    }
+
 }

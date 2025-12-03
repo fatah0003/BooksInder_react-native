@@ -6,6 +6,7 @@ use App\Enum\ExchangeStatusEnum;
 use App\Enum\ExchangeTypeEnum;
 use App\Repository\ExchangeRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ExchangeRepository::class)]
 class Exchange
@@ -13,37 +14,50 @@ class Exchange
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'exchangeRequest')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?User $userRequester = null;
 
     #[ORM\ManyToOne(inversedBy: 'exchangeReceive')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?User $userReceiver = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?Book $bookOne = null;
 
     #[ORM\ManyToOne]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?Book $bookTwo = null;
 
     #[ORM\Column(enumType: ExchangeStatusEnum::class)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?ExchangeStatusEnum $status = null;
 
     #[ORM\Column]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?\DateTimeImmutable $acceptedAt = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?\DateTimeImmutable $refusedAt = null;
 
     #[ORM\Column(nullable: true, enumType: ExchangeTypeEnum::class)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?ExchangeTypeEnum $exchangeType = null;
+
+    public function __construct()
+    {
+        $this->createdAt = new \DateTimeImmutable();
+        $this->status = ExchangeStatusEnum::PENDING;
+    }
 
     public function getId(): ?int
     {

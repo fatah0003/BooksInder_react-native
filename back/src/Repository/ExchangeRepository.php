@@ -25,6 +25,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findLatestSentRequests(User $user, int $limit = 10): array
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('ur', 'ure', 'b1', 'b2')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookOne', 'b1')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('e.userRequester = :user')
             ->setParameter('user', $user)
             ->orderBy('e.createdAt', 'DESC')
@@ -39,6 +44,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findLatestReceivedRequests(User $user, int $limit = 10): array
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('ur', 'ure', 'b1', 'b2')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookOne', 'b1')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('e.userReceiver = :user')
             ->andWhere('e.status = :status')
             ->setParameter('user', $user)
@@ -55,6 +65,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findReceivedByStatus(User $user, ExchangeStatusEnum $status, int $limit = 10): array
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('ur', 'ure', 'b1', 'b2')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookOne', 'b1')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('e.userReceiver = :user')
             ->andWhere('e.status = :status')
             ->setParameter('user', $user)
@@ -71,6 +86,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findLatestCompletedRequests(User $user, int $limit = 10): array
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('ur', 'ure', 'b1', 'b2')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookOne', 'b1')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('e.userRequester = :user OR e.userReceiver = :user')
             ->andWhere('e.status IN (:statuses)')
             ->setParameter('user', $user)
@@ -90,6 +110,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findValidatedExchanges(User $user, int $limit = 10): array
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('ur', 'ure', 'b1', 'b2')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookOne', 'b1')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('e.userRequester = :user OR e.userReceiver = :user')
             ->andWhere('e.status = :status')
             ->setParameter('user', $user)
@@ -126,6 +151,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findPendingExchangeByUserAndBook(User $user, Book $book): ?Exchange
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('ur', 'ure', 'b1', 'b2')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookOne', 'b1')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('e.userRequester = :user')
             ->andWhere('e.bookOne = :book')
             ->andWhere('e.status = :status')
@@ -157,6 +187,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findExchangesByBook(Book $book): array
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('ur', 'ure', 'b1', 'b2')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookOne', 'b1')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('e.bookOne = :book OR e.bookTwo = :book')
             ->setParameter('book', $book)
             ->orderBy('e.createdAt', 'DESC')
@@ -170,7 +205,11 @@ class ExchangeRepository extends ServiceEntityRepository
     public function findPendingRequestsForUserBooks(User $user): array
     {
         return $this->createQueryBuilder('e')
+            ->addSelect('b', 'ur', 'ure', 'b2')
             ->join('e.bookOne', 'b')
+            ->leftJoin('e.userRequester', 'ur')
+            ->leftJoin('e.userReceiver', 'ure')
+            ->leftJoin('e.bookTwo', 'b2')
             ->where('b.user = :user')
             ->andWhere('e.status = :status')
             ->setParameter('user', $user)
@@ -185,71 +224,30 @@ class ExchangeRepository extends ServiceEntityRepository
      */
     public function getUserExchangeStats(User $user): array
     {
-        $qb = $this->createQueryBuilder('e');
+        $qb = $this->createQueryBuilder('e')
+            ->select([
+                'COUNT(e.id) AS total',
+                "SUM(CASE WHEN e.userReceiver = :user AND e.status = :pending THEN 1 ELSE 0 END) AS pending",
+                "SUM(CASE WHEN e.status = :validated THEN 1 ELSE 0 END) AS validated",
+                "SUM(CASE WHEN e.userRequester = :user AND e.status = :rejected THEN 1 ELSE 0 END) AS rejected",
+                "SUM(CASE WHEN e.userRequester = :user THEN 1 ELSE 0 END) AS sent",
+                "SUM(CASE WHEN e.userReceiver = :user THEN 1 ELSE 0 END) AS received",
+            ])
+            ->where('e.userRequester = :user OR e.userReceiver = :user')
+            ->setParameter('user', $user)
+            ->setParameter('pending', ExchangeStatusEnum::PENDING)
+            ->setParameter('validated', ExchangeStatusEnum::VALIDATED)
+            ->setParameter('rejected', ExchangeStatusEnum::REJECTED);
 
-        $stats = [
-            'total' => 0,
-            'pending' => 0,
-            'validated' => 0,
-            'rejected' => 0,
-            'sent' => 0,
-            'received' => 0,
+        $result = $qb->getQuery()->getSingleResult();
+
+        return [
+            'total'     => (int) $result['total'],
+            'pending'   => (int) $result['pending'],
+            'validated' => (int) $result['validated'],
+            'rejected'  => (int) $result['rejected'],
+            'sent'      => (int) $result['sent'],
+            'received'  => (int) $result['received'],
         ];
-
-        // Total des échanges
-        $stats['total'] = $qb
-            ->select('COUNT(e.id)')
-            ->where('e.userRequester = :user OR e.userReceiver = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // En attente
-        $stats['pending'] = $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->where('e.userReceiver = :user')
-            ->andWhere('e.status = :status')
-            ->setParameter('user', $user)
-            ->setParameter('status', ExchangeStatusEnum::PENDING)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // Validés
-        $stats['validated'] = $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->where('e.userRequester = :user OR e.userReceiver = :user')
-            ->andWhere('e.status = :status')
-            ->setParameter('user', $user)
-            ->setParameter('status', ExchangeStatusEnum::VALIDATED)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // Refusés
-        $stats['rejected'] = $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->where('e.userRequester = :user')
-            ->andWhere('e.status = :status')
-            ->setParameter('user', $user)
-            ->setParameter('status', ExchangeStatusEnum::REJECTED)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // Envoyés
-        $stats['sent'] = $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->where('e.userRequester = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        // Reçus
-        $stats['received'] = $this->createQueryBuilder('e')
-            ->select('COUNT(e.id)')
-            ->where('e.userReceiver = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return $stats;
     }
 }
