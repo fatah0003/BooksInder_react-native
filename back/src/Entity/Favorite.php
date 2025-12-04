@@ -4,9 +4,17 @@ namespace App\Entity;
 
 use App\Repository\FavoriteRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: FavoriteRepository::class)]
-#[ORM\Table(name: 'favorite', uniqueConstraints: [new ORM\UniqueConstraint(name: 'user_book_unique', columns: ['user_id', 'book_id'])])]
+#[ORM\Table(name: 'favorite', uniqueConstraints: [
+    new ORM\UniqueConstraint(name: 'user_book_unique', columns: ['user_id', 'book_id'])
+])]
+#[UniqueEntity(
+    fields: ['user', 'book'],
+    message: 'Ce livre est déjà dans vos favoris'
+)]
 class Favorite
 {
     #[ORM\Id]
@@ -16,13 +24,16 @@ class Favorite
 
     #[ORM\ManyToOne(inversedBy: 'favorites')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: 'L\'utilisateur est requis')]
     private ?User $user = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: 'Le livre est requis')]
     private ?Book $book = null;
 
     #[ORM\Column]
+    #[Assert\NotNull]
     private ?\DateTimeImmutable $createdAt = null;
 
     public function __construct()

@@ -7,8 +7,10 @@ use App\Enum\ExchangeTypeEnum;
 use App\Repository\ExchangeRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ExchangeRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Exchange
 {
     #[ORM\Id]
@@ -18,26 +20,35 @@ class Exchange
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'exchangeRequest')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: 'Le demandeur est requis')]
     #[Groups(['exchange:read', 'exchange:detail'])]
     private ?User $userRequester = null;
 
     #[ORM\ManyToOne(inversedBy: 'exchangeReceive')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: 'Le destinataire est requis')]
     #[Groups(['exchange:read', 'exchange:detail'])]
     private ?User $userReceiver = null;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: 'Le premier livre est requis')]
     #[Groups(['exchange:read', 'exchange:detail'])]
     private ?Book $bookOne = null;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
     #[Groups(['exchange:read', 'exchange:detail'])]
     private ?Book $bookTwo = null;
 
     #[ORM\Column(enumType: ExchangeStatusEnum::class)]
+    #[Assert\NotNull]
     #[Groups(['exchange:read', 'exchange:detail'])]
     private ?ExchangeStatusEnum $status = null;
 
     #[ORM\Column]
+    #[Assert\NotNull]
     #[Groups(['exchange:read', 'exchange:detail'])]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -170,5 +181,17 @@ class Exchange
         $this->exchangeType = $exchangeType;
 
         return $this;
+    }
+
+    #[ORM\PreUpdate]
+    public function onPreUpdate(): void
+    {
+        // Mise à jour automatique des dates selon le statut
+        if ($this->status === ExchangeStatusEnum::ACCEPTED && $this->acceptedAt === null) {
+            $this->acceptedAt = new \DateTimeImmutable();
+        }
+        if ($this->status === ExchangeStatusEnum::REFUSED && $this->refusedAt === null) {
+            $this->refusedAt = new \DateTimeImmutable();
+        }
     }
 }

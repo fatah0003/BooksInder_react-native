@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20251106135147 extends AbstractMigration
+final class Version20251204131307 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -20,12 +20,12 @@ final class Version20251106135147 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('CREATE TABLE book (id INT AUTO_INCREMENT NOT NULL, title VARCHAR(100) NOT NULL, author VARCHAR(100) NOT NULL, isbn VARCHAR(20) NOT NULL, description LONGTEXT NOT NULL, pages INT NOT NULL, created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\', updated_at DATETIME DEFAULT NULL COMMENT \'(DC2Type:datetime_immutable)\', PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('ALTER TABLE exchange CHANGE user_requester_id user_requester_id INT NOT NULL, CHANGE user_receiver_id user_receiver_id INT NOT NULL, CHANGE book_one_id book_one_id INT NOT NULL');
     }
 
     public function down(Schema $schema): void
     {
         // this down() migration is auto-generated, please modify it to your needs
-        $this->addSql('DROP TABLE book');
+        $this->addSql('ALTER TABLE exchange CHANGE user_requester_id user_requester_id INT DEFAULT NULL, CHANGE user_receiver_id user_receiver_id INT DEFAULT NULL, CHANGE book_one_id book_one_id INT DEFAULT NULL');
     }
 }

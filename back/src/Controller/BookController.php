@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -72,6 +73,7 @@ class BookController extends AbstractController
      * Créer un livre
      */
     #[Route('', name: 'create', methods: ['POST'])]
+    #[IsGranted('ROLE_USER')]
     public function create(Request $request): JsonResponse
     {
         try {
@@ -117,6 +119,7 @@ class BookController extends AbstractController
      * Mettre à jour un livre
      */
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
+    #[IsGranted('ROLE_USER')]
     public function update(Request $request, Book $book): JsonResponse
     {
         try {
@@ -168,6 +171,7 @@ class BookController extends AbstractController
      * Supprimer un livre
      */
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
+    #[IsGranted('ROLE_USER')]
     public function delete(Book $book): JsonResponse
     {
         try {

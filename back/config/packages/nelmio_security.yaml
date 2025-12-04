@@ -1,0 +1,24 @@
+nelmio_security:
+    # Protection anti-clickjacking (empêche l'inclusion dans un iframe)
+    clickjacking:
+        paths:
+            '^/.*': DENY
+
+    # Empêche le navigateur de deviner le type MIME
+    content_type:
+        nosniff: true
+
+    # Protection XSS
+    xss_protection:
+        enabled: true
+        mode_block: true
+
+    # Politique du Referer
+    referrer_policy:
+        enabled: true
+        policies:
+            - 'strict-origin-when-cross-origin'
+
+    # Force HTTPS (désactivé en dev)
+    forced_ssl:
+        enabled: false

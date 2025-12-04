@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\Notification;
+use App\Entity\User;
 use App\Repository\NotificationRepository;
 use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,17 +19,15 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class NotificationController extends AbstractController
 {
     public function __construct(
-        private NotificationRepository $repo,
-        private EntityManagerInterface $em,
-        private NotificationService $notificationService
+        private readonly NotificationRepository $repo,
+        private readonly EntityManagerInterface $em,
+        private readonly NotificationService $notificationService
     ) {}
 
-    /**
-     * Liste des notifications de l'utilisateur
-     */
     #[Route('', name: 'notification_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $limit = $request->query->getInt('limit', 20);
         $onlyUnread = $request->query->getBoolean('unread', false);
@@ -50,12 +50,10 @@ class NotificationController extends AbstractController
         ], 200, [], ['groups' => 'notification:read']);
     }
 
-    /**
-     * Nombre de notifications non lues
-     */
     #[Route('/unread-count', name: 'notification_unread_count', methods: ['GET'])]
     public function unreadCount(): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $count = $this->repo->count(['user' => $user, 'isRead' => false]);
 
@@ -65,12 +63,14 @@ class NotificationController extends AbstractController
         ]);
     }
 
-    /**
-     * Marquer une notification comme lue
-     */
     #[Route('/{id}/read', name: 'notification_mark_read', methods: ['PATCH'])]
-    public function markRead(Notification $notification): JsonResponse
+    public function markRead(?Notification $notification): JsonResponse
     {
+        if (!$notification) {
+            return $this->json(['error' => 'Notification introuvable'], Response::HTTP_NOT_FOUND);
+        }
+
+        /** @var User $user */
         $user = $this->getUser();
 
         if ($notification->getUser() !== $user) {
@@ -86,12 +86,10 @@ class NotificationController extends AbstractController
         ]);
     }
 
-    /**
-     * Marquer TOUTES les notifications comme lues
-     */
     #[Route('/mark-all-read', name: 'notification_mark_all_read', methods: ['PATCH'])]
     public function markAllRead(): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $count = $this->notificationService->markAllAsRead($user);
 
@@ -102,12 +100,14 @@ class NotificationController extends AbstractController
         ]);
     }
 
-    /**
-     * Supprimer une notification
-     */
     #[Route('/{id}', name: 'notification_delete', methods: ['DELETE'])]
-    public function delete(Notification $notification): JsonResponse
+    public function delete(?Notification $notification): JsonResponse
     {
+        if (!$notification) {
+            return $this->json(['error' => 'Notification introuvable'], Response::HTTP_NOT_FOUND);
+        }
+
+        /** @var User $user */
         $user = $this->getUser();
 
         if ($notification->getUser() !== $user) {
@@ -123,12 +123,10 @@ class NotificationController extends AbstractController
         ], Response::HTTP_OK);
     }
 
-    /**
-     * Supprimer toutes les notifications lues
-     */
     #[Route('/clear-read', name: 'notification_clear_read', methods: ['DELETE'])]
     public function clearRead(): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
 
         $qb = $this->em->createQueryBuilder();
@@ -146,12 +144,14 @@ class NotificationController extends AbstractController
         ]);
     }
 
-    /**
-     * Voir le détail d'une notification (et la marquer comme lue automatiquement)
-     */
     #[Route('/{id}', name: 'notification_show', methods: ['GET'])]
-    public function show(Notification $notification): JsonResponse
+    public function show(?Notification $notification): JsonResponse
     {
+        if (!$notification) {
+            return $this->json(['error' => 'Notification introuvable'], Response::HTTP_NOT_FOUND);
+        }
+
+        /** @var User $user */
         $user = $this->getUser();
 
         if ($notification->getUser() !== $user) {

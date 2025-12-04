@@ -11,11 +11,11 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
-#[ORM\HasLifecycleCallbacks]
-
+use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[UniqueEntity(fields: ["email"], message: "Cet email est déjà utilisé.")]
+#[ORM\HasLifecycleCallbacks]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -25,6 +25,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Assert\NotBlank]
+    #[Assert\Email]
+    #[Assert\Length(max: 180)]
     #[Groups(['user:read', 'user:write', 'exchange:detail', 'book:read:detail'])]
     private ?string $email = null;
 
@@ -32,6 +35,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @var list<string> The user roles
      */
     #[ORM\Column]
+    #[Assert\NotNull]
+    #[Assert\All([
+        new Assert\Choice(choices: ['ROLE_USER', 'ROLE_ADMIN', 'ROLE_MODERATOR'])
+    ])]
     #[Groups(['user:read'])]
     private array $roles = [];
 
@@ -39,10 +46,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @var string The hashed password
      */
     #[ORM\Column]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 60, max: 255)]
     #[Groups(['user:write'])]
     private ?string $password = null;
 
     #[ORM\Column]
+    #[Assert\NotNull]
     #[Groups(['user:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -61,6 +71,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private Collection $books;
 
     #[ORM\Column(enumType: UserStatusEnum::class)]
+    #[Assert\NotNull]
     #[Groups(['user:read'])]
     private ?UserStatusEnum $userStatus = null;
 

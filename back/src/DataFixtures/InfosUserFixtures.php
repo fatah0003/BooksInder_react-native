@@ -22,18 +22,18 @@ class InfosUserFixtures extends Fixture implements DependentFixtureInterface
         // Récupérer les utilisateurs créés par UserFixtures
         $users = $manager->getRepository(User::class)->findAll();
 
-        foreach ($users as $user) {
+        foreach ($users as $index => $user) {
             $infos = new InfosUser();
             $infos->setUser($user);
-            $infos->setUserName($user->getEmail() === 'admin@example.com' ? 'AdminName' : 'UserName');
-            $infos->setPhoneNumber('0600000000');
+            $infos->setUserName($user->getEmail() === 'admin@example.com' ? 'AdminName' : 'UserName' . $index);
+            $infos->setPhoneNumber('06000000' . str_pad($index, 2, '0', STR_PAD_LEFT));
             $infos->setCity('Paris');
             $infos->setBirthDate(new \DateTimeImmutable('1990-01-01'));
             $infos->setBio($user->getEmail() === 'admin@example.com' ? 'Admin user' : 'Regular user');
-            $infos->setCreatedAt(new \DateTimeImmutable());
 
             $manager->persist($infos);
         }
+
 
         $manager->flush();
     }

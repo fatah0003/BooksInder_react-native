@@ -5,6 +5,8 @@ namespace App\Repository;
 use App\Entity\Notification;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use App\Entity\User;
+use App\Enum\NotificationTypeEnum;
 
 class NotificationRepository extends ServiceEntityRepository
 {

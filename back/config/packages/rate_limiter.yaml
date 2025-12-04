@@ -1,0 +1,19 @@
+framework:
+  rate_limiter:
+    # Login : 5 tentatives par 15 minutes
+    login:
+      policy: 'sliding_window'
+      limit: 5
+      interval: '15 minutes'
+
+    # Register : 3 inscriptions par heure par IP
+    register:
+      policy: 'fixed_window'
+      limit: 3
+      interval: '1 hour'
+
+    # API générale : 100 requêtes par minute
+    api:
+      policy: 'token_bucket'
+      limit: 100
+      rate: { interval: '1 minute', amount: 100 }

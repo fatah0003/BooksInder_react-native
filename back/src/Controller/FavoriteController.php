@@ -108,6 +108,7 @@ class FavoriteController extends AbstractController
     #[Route('/toggle/{bookId}', name: 'favorite_toggle', methods: ['PATCH'])]
     public function toggle(int $bookId): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $book = $this->bookRepository->find($bookId);
 
@@ -128,29 +129,31 @@ class FavoriteController extends AbstractController
                 'message' => 'Livre retiré des favoris',
                 'isFavorite' => false
             ]);
-        } else {
-            // Ajouter aux favoris
-            if ($book->getUser() === $user) {
-                return $this->json(['error' => 'Vous ne pouvez pas ajouter votre propre livre en favori'], Response::HTTP_BAD_REQUEST);
-            }
-
-            $favorite = new Favorite();
-            $favorite->setUser($user);
-            $favorite->setBook($book);
-//            $favorite->setCreatedAt(new \DateTimeImmutable());
-
-            $this->em->persist($favorite);
-            $this->em->flush();
-
-            return $this->json([
-                'success' => true,
-                'action' => 'added',
-                'message' => 'Livre ajouté aux favoris',
-                'isFavorite' => true,
-                'favoriteId' => $favorite->getId()
-            ], Response::HTTP_CREATED);
         }
+
+        // Ajouter aux favoris
+        if ($book->getUser() === $user) {
+            return $this->json([
+                'error' => 'Vous ne pouvez pas ajouter votre propre livre en favori'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $favorite = new Favorite();
+        $favorite->setUser($user);
+        $favorite->setBook($book);
+
+        $this->em->persist($favorite);
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'action' => 'added',
+            'message' => 'Livre ajouté aux favoris',
+            'isFavorite' => true,
+            'favoriteId' => $favorite->getId()
+        ], Response::HTTP_CREATED);
     }
+
 
     /**
      * Liste de tous les favoris de l'utilisateur

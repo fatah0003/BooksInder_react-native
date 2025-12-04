@@ -1,0 +1,3 @@
+nelmio_security:
+  forced_ssl:
+    enabled: true  # Force HTTPS en production
