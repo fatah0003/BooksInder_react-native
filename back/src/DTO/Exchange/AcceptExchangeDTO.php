@@ -12,5 +12,5 @@ class AcceptExchangeDTO
     public int $bookTwoId;
 
     #[Assert\NotNull(message: 'Le type d\'échange est requis')]
-    public ?ExchangeTypeEnum $exchangeType = null;
+    public ?string $exchangeType = null;
 }

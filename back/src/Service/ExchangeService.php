@@ -28,57 +28,57 @@ class ExchangeService
     /**
      * Crée une demande d'échange
      */
-    public function createExchange(User $user, CreateExchangeDTO $dto): Exchange
+    public function createExchange(User $requester, CreateExchangeDTO $dto): Exchange
     {
-        $book = $this->bookRepository->find($dto->bookId);
+        // Récupérer le livre demandé
+        $bookOne = $this->bookRepository->find($dto->bookOneId);
 
-        if (!$book) {
+        if (!$bookOne) {
             throw new \InvalidArgumentException('Livre introuvable');
         }
 
-        if ($book->getUser() === $user) {
-            throw new \InvalidArgumentException('Vous ne pouvez pas demander l\'échange de votre propre livre');
+        // Vérifications métier
+        if ($bookOne->getUser() === $requester) {
+            throw new \InvalidArgumentException('Vous ne pouvez pas demander un échange avec votre propre livre');
         }
 
-        if ($book->getBookStatus() !== BookStatusEnum::ACTIVE) {
+        if ($bookOne->getBookStatus() !== BookStatusEnum::ACTIVE) {
             throw new \InvalidArgumentException('Ce livre n\'est pas disponible pour un échange');
         }
 
-        $existingExchange = $this->exchangeRepository->findPendingExchangeByUserAndBook($user, $book);
-        if ($existingExchange) {
-            throw new \InvalidArgumentException('Vous avez déjà une demande en cours pour ce livre');
-        }
+        // ✅ Récupérer automatiquement le receiver via le propriétaire du livre
+        $receiver = $bookOne->getUser();
 
-        // Transaction pour la création
+        // Créer l'échange
         $exchange = new Exchange();
-        $exchange->setUserRequester($user);
-        $exchange->setUserReceiver($book->getUser());
-        $exchange->setBookOne($book);
+        $exchange->setUserRequester($requester);
+        $exchange->setUserReceiver($receiver);  // ✅ Automatique !
+        $exchange->setBookOne($bookOne);
         $exchange->setStatus(ExchangeStatusEnum::PENDING);
-        $exchange->setCreatedAt(new \DateTimeImmutable());
+        // exchangeType et bookTwo restent null jusqu'à l'acceptation
 
         $this->em->persist($exchange);
         $this->em->flush();
 
-        // ✅ Notification APRÈS le flush
+        // Notification au propriétaire du livre
         try {
             $this->notificationService->notifyExchangeRequestReceived($exchange);
         } catch (\Exception $e) {
-            // Log l'erreur mais ne bloque pas la création
-            $this->logger->warning('Échec notification création échange', [
+            $this->logger->warning('Échec notification demande échange', [
                 'exchangeId' => $exchange->getId(),
                 'error' => $e->getMessage()
             ]);
         }
 
-        $this->logger->info('Échange créé', [
+        $this->logger->info('Demande d\'échange créée', [
             'exchangeId' => $exchange->getId(),
-            'requesterId' => $user->getId(),
-            'bookId' => $book->getId()
+            'requesterId' => $requester->getId(),
+            'receiverId' => $receiver->getId()
         ]);
 
         return $exchange;
     }
+
 
     /**
      * Accepte une demande d'échange

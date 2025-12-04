@@ -187,10 +187,10 @@ class Exchange
     public function onPreUpdate(): void
     {
         // Mise à jour automatique des dates selon le statut
-        if ($this->status === ExchangeStatusEnum::ACCEPTED && $this->acceptedAt === null) {
+        if ($this->status === ExchangeStatusEnum::VALIDATED && $this->acceptedAt === null) {
             $this->acceptedAt = new \DateTimeImmutable();
         }
-        if ($this->status === ExchangeStatusEnum::REFUSED && $this->refusedAt === null) {
+        if ($this->status === ExchangeStatusEnum::REJECTED && $this->refusedAt === null) {
             $this->refusedAt = new \DateTimeImmutable();
         }
     }
