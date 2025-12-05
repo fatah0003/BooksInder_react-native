@@ -39,14 +39,19 @@ security:
         # --- ROUTES PUBLIQUES ---
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/books$, roles: PUBLIC_ACCESS, methods: [GET] }
-        - { path: ^/api/books/\d+$, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/books$, roles: PUBLIC_ACCESS, methods: [ GET ] }
+        - { path: ^/api/books/\d+$, roles: PUBLIC_ACCESS, methods: [ GET ] }
 
         # --- ADMIN ---
         - { path: ^/api/users$, roles: ROLE_ADMIN }
 
+        # ✅ CORRIGÉ : Regex entre guillemets (simples ou doubles)
+        - { path: '^/api/users/[0-9a-f-]{36}$', roles: IS_AUTHENTICATED_FULLY }
+
         # --- TOUT LE RESTE REQUIERT AUTHENTIFICATION ---
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+
 
 when@test:
     security:

@@ -33,6 +33,19 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
+    /**
+     * Trouve un utilisateur par son UUID
+     */
+    public function findOneByUuid(string $uuid): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.uuid = :uuid')
+            ->setParameter('uuid', $uuid)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+
 //    /**
 //     * @return User[] Returns an array of User objects
 //     */

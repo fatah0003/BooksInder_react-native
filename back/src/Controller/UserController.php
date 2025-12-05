@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\DTO\User\UpdateUserDTO;
 use App\Entity\User;
+use App\Repository\UserRepository;
 use App\Service\UserService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,7 +21,8 @@ class UserController extends AbstractController
 {
     public function __construct(
         private readonly UserService $userService,
-        private readonly SerializerInterface $serializer
+        private readonly SerializerInterface $serializer,
+        private readonly UserRepository $userRepository
     ) {}
 
     #[Route('', name: 'index', methods: ['GET'])]
@@ -31,20 +33,33 @@ class UserController extends AbstractController
         return $this->json($this->getDoctrine()->getRepository(User::class)->findAll(), 200, [], ['groups' => 'user:read']);
     }
 
-    #[Route('/{id}', name: 'show', methods: ['GET'])]
-    public function show(User $user): JsonResponse
+    #[Route('/{uuid}', name: 'show', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
+    public function show(string $uuid): JsonResponse
     {
-        if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
-            return $this->json(['error' => 'Access denied'], 403);
+        $user = $this->userRepository->findOneByUuid($uuid);
+
+        if (!$user) {
+            return $this->json(['error' => 'Utilisateur introuvable'], 404);
         }
-        return $this->json($user, 200, [], ['groups' => 'user:read']);
+
+        return $this->json([
+            'success' => true,
+            'data' => $user
+        ], 200, [], ['groups' => 'user:read']);
     }
 
-    #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
-    public function update(Request $request, User $user): JsonResponse
+    #[Route('/{uuid}', name: 'update', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT', 'PATCH'])]
+    public function update(string $uuid, Request $request): JsonResponse
     {
-        if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
-            return $this->json(['error' => 'Access denied'], 403);
+        $user = $this->userRepository->findOneByUuid($uuid);
+
+        if (!$user) {
+            return $this->json(['error' => 'Utilisateur introuvable'], 404);
+        }
+
+        // Vérifier que l'utilisateur connecté modifie son propre profil
+        if ($this->getUser() !== $user && !in_array('ROLE_ADMIN', $this->getUser()->getRoles())) {
+            return $this->json(['error' => 'Accès refusé'], 403);
         }
 
         try {
@@ -62,14 +77,26 @@ class UserController extends AbstractController
         }
     }
 
-    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
-    public function delete(User $user): JsonResponse
+
+    #[Route('/{uuid}', name: 'delete', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['DELETE'])]
+    public function delete(string $uuid): JsonResponse
     {
-        if ($this->getUser() !== $user && !$this->isGranted('ROLE_ADMIN')) {
-            return $this->json(['error' => 'Access denied'], 403);
+        $user = $this->userRepository->findOneByUuid($uuid);
+
+        if (!$user) {
+            return $this->json(['error' => 'Utilisateur introuvable'], 404);
+        }
+
+        // Vérifier permissions
+        if ($this->getUser() !== $user && !in_array('ROLE_ADMIN', $this->getUser()->getRoles())) {
+            return $this->json(['error' => 'Accès refusé'], 403);
         }
 
         $this->userService->delete($user);
-        return $this->json(null, 204);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Utilisateur supprimé'
+        ]);
     }
 }

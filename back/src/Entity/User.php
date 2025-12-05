@@ -12,6 +12,7 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[UniqueEntity(fields: ["email"], message: "Cet email est déjà utilisé.")]
@@ -21,8 +22,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['user:read', 'exchange:read', 'exchange:detail', 'book:read:detail'])]
     private ?int $id = null;
+
+    #[ORM\Column(type: 'string', length: 36, unique: true)]
+    #[Groups(['user:read', 'book:read', 'exchange:read'])]
+    private ?string $uuid = null;
 
     #[ORM\Column(length: 180)]
     #[Assert\NotBlank]
@@ -99,6 +103,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->exchangeRequest = new ArrayCollection();
         $this->exchangeReceive = new ArrayCollection();
         $this->favorites = new ArrayCollection();
+        $this->uuid = Uuid::v4()->toRfc4122();
     }
 
     public function getId(): ?int
@@ -245,6 +250,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->userStatus = $userStatus;
 
+        return $this;
+    }
+
+    public function getUuid(): ?string
+    {
+        return $this->uuid;
+    }
+
+    public function setUuid(string $uuid): self
+    {
+        $this->uuid = $uuid;
         return $this;
     }
 
