@@ -12,6 +12,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
 class Book
@@ -19,8 +20,12 @@ class Book
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['book:read', 'user:read'])]
     private ?int $id = null;
+
+    #[ORM\Column(type: 'string', length: 36, unique: true)]
+    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail'])]
+    private ?string $uuid = null;
+
 
     #[ORM\Column(length: 100)]
     #[Groups(['book:read', 'book:write', 'user:read'])]
@@ -87,6 +92,7 @@ class Book
 
     public function __construct()
     {
+        $this->uuid = Uuid::v4()->toRfc4122();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
 //        $this->categorie = [BookCategorieEnum::FICTION]; // valeur par défaut pour éviter une erreur d’énumération vide
@@ -96,6 +102,8 @@ class Book
     }
 
     public function getId(): ?int { return $this->id; }
+    public function getUuid(): ?string { return $this->uuid; }
+    public function setUuid(string $uuid): self { $this->uuid = $uuid; return $this; }
     public function getTitle(): ?string { return $this->title; }
     public function setTitle(string $title): static { $this->title = $title; return $this; }
     public function getAuthor(): ?string { return $this->author; }

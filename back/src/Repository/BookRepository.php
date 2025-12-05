@@ -126,4 +126,16 @@ class BookRepository extends ServiceEntityRepository
 
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
+
+    /**
+     * Trouve un livre par son UUID
+     */
+    public function findOneByUuid(string $uuid): ?Book
+    {
+        return $this->createQueryBuilder('b')
+            ->where('b.uuid = :uuid')
+            ->setParameter('uuid', $uuid)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

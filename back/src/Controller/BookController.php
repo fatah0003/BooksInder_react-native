@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\DTO\Book\CreateBookDTO;
 use App\DTO\Book\UpdateBookDTO;
 use App\Entity\Book;
+use App\Repository\BookRepository;  // 👈 Ajouter
 use App\Service\BookService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,6 +22,7 @@ class BookController extends AbstractController
 {
     public function __construct(
         private readonly BookService $bookService,
+        private readonly BookRepository $bookRepository,
         private readonly SerializerInterface $serializer,
         private readonly ValidatorInterface $validator,
         private readonly LoggerInterface $logger
@@ -59,9 +61,18 @@ class BookController extends AbstractController
     /**
      * Afficher un livre
      */
-    #[Route('/{id}', name: 'show', methods: ['GET'])]
-    public function show(Book $book): JsonResponse
+    #[Route('/{uuid}', name: 'show', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
+    public function show(string $uuid): JsonResponse  // 👈 Modifié
     {
+        $book = $this->bookRepository->findOneByUuid($uuid);  // 👈 Ajouté
+
+        if (!$book) {  // 👈 Ajouté
+            return $this->json([
+                'success' => false,
+                'error' => 'Livre introuvable'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
         return $this->json([
             'success' => true,
             'data' => $book
@@ -116,9 +127,18 @@ class BookController extends AbstractController
     /**
      * Mettre à jour un livre
      */
-    #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
-    public function update(Request $request, Book $book): JsonResponse
+    #[Route('/{uuid}', name: 'update', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT', 'PATCH'])]
+    public function update(Request $request, string $uuid): JsonResponse  // 👈 Modifié
     {
+        $book = $this->bookRepository->findOneByUuid($uuid);  // 👈 Ajouté
+
+        if (!$book) {  // 👈 Ajouté
+            return $this->json([
+                'success' => false,
+                'error' => 'Livre introuvable'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
         try {
             /** @var UpdateBookDTO $dto */
             $dto = $this->serializer->deserialize(
@@ -167,9 +187,18 @@ class BookController extends AbstractController
     /**
      * Supprimer un livre
      */
-    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
-    public function delete(Book $book): JsonResponse
+    #[Route('/{uuid}', name: 'delete', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['DELETE'])]
+    public function delete(string $uuid): JsonResponse  // 👈 Modifié
     {
+        $book = $this->bookRepository->findOneByUuid($uuid);  // 👈 Ajouté
+
+        if (!$book) {  // 👈 Ajouté
+            return $this->json([
+                'success' => false,
+                'error' => 'Livre introuvable'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
         try {
             $this->bookService->deleteBook($book, $this->getUser());
 
