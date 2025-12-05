@@ -11,54 +11,40 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
-#[UniqueEntity(
-    fields: ['isbn', 'user'],
-    message: 'Vous avez déjà ajouté un livre avec cet ISBN',
-    errorPath: 'isbn'
-)]
 class Book
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?int $id = null;
 
+    #[ORM\Column(type: 'string', length: 36, unique: true)]
+    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail'])]
+    private ?string $uuid = null;
+
+
     #[ORM\Column(length: 100)]
-    #[Assert\NotBlank]
-    #[Assert\Length(max: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?string $title = null;
 
     #[ORM\Column(length: 100)]
-    #[Assert\NotBlank]
-    #[Assert\Length(max: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?string $author = null;
 
     #[ORM\Column(length: 20)]
-    #[Assert\NotBlank]
-    #[Assert\Isbn]
-    #[Assert\Length(max: 20)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?string $isbn = null;
 
     #[ORM\Column(type: Types::TEXT)]
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 10, max: 5000)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?string $description = null;
 
     #[ORM\Column]
-    #[Assert\NotNull]
-    #[Assert\Positive]
-    #[Assert\Range(min: 1, max: 10000)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?int $pages = null;
 
     #[ORM\Column]
@@ -75,34 +61,27 @@ class Book
     private ?User $user = null;
 
     #[ORM\Column(length: 40, nullable: true)]
-    #[Assert\Length(max: 40)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?string $edition = null;
 
     #[ORM\Column(length: 50)]
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 2, max: 50)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?string $location = null;
 
     #[ORM\Column(type: Types::SIMPLE_ARRAY, enumType: BookCategorieEnum::class)]
-    #[Assert\NotBlank]
-    #[Assert\Count(min: 1, max: 5)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private array $categorie = [];
 
     #[ORM\Column(enumType: StateEnum::class)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?StateEnum $state = null;
 
     #[ORM\Column(enumType: BookStatusEnum::class)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private ?BookStatusEnum $bookStatus = null;
 
     #[ORM\Column(type: Types::SIMPLE_ARRAY, enumType: ExchangeTypeEnum::class)]
-    #[Assert\NotBlank]
-    #[Assert\Count(min: 1, max: 3)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read'])]
     private array $availableExchangeTypes = [];
 
 //    /**
@@ -113,6 +92,7 @@ class Book
 
     public function __construct()
     {
+        $this->uuid = Uuid::v4()->toRfc4122();
         $this->createdAt = new \DateTimeImmutable();
         $this->updatedAt = new \DateTimeImmutable();
 //        $this->categorie = [BookCategorieEnum::FICTION]; // valeur par défaut pour éviter une erreur d’énumération vide
@@ -122,6 +102,8 @@ class Book
     }
 
     public function getId(): ?int { return $this->id; }
+    public function getUuid(): ?string { return $this->uuid; }
+    public function setUuid(string $uuid): self { $this->uuid = $uuid; return $this; }
     public function getTitle(): ?string { return $this->title; }
     public function setTitle(string $title): static { $this->title = $title; return $this; }
     public function getAuthor(): ?string { return $this->author; }
