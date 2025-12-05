@@ -250,4 +250,17 @@ class ExchangeRepository extends ServiceEntityRepository
             'received'  => (int) $result['received'],
         ];
     }
+
+    /**
+     * Trouve un échange par son UUID
+     */
+    public function findOneByUuid(string $uuid): ?Exchange
+    {
+        return $this->createQueryBuilder('e')
+            ->where('e.uuid = :uuid')
+            ->setParameter('uuid', $uuid)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
 }

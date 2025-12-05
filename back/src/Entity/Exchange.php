@@ -8,6 +8,7 @@ use App\Repository\ExchangeRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: ExchangeRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -16,8 +17,11 @@ class Exchange
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['exchange:read', 'exchange:detail'])]
     private ?int $id = null;
+
+    #[ORM\Column(type: 'string', length: 36, unique: true)]
+    #[Groups(['exchange:read', 'exchange:detail'])]
+    private ?string $uuid = null;
 
     #[ORM\ManyToOne(inversedBy: 'exchangeRequest')]
     #[ORM\JoinColumn(nullable: false)]
@@ -66,6 +70,7 @@ class Exchange
 
     public function __construct()
     {
+        $this->uuid = Uuid::v4()->toRfc4122();
         $this->createdAt = new \DateTimeImmutable();
         $this->status = ExchangeStatusEnum::PENDING;
     }
@@ -74,6 +79,18 @@ class Exchange
     {
         return $this->id;
     }
+
+    public function getUuid(): ?string
+    {
+        return $this->uuid;
+    }
+
+    public function setUuid(string $uuid): self
+    {
+        $this->uuid = $uuid;
+        return $this;
+    }
+
 
     public function getUserRequester(): ?User
     {

@@ -83,9 +83,15 @@ class ExchangeController extends AbstractController
     /**
      * Accepter une demande
      */
-    #[Route('/{id}/accept', name: 'exchange_accept', methods: ['PUT'])]
-    public function accept(Exchange $exchange, Request $request): JsonResponse
+    #[Route('/{uuid}/accept', name: 'exchange_accept', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT'])]
+    public function accept(string $uuid, Request $request): JsonResponse
     {
+        $exchange = $this->exchangeRepository->findOneByUuid($uuid);
+
+        if (!$exchange) {
+            return $this->json(['error' => 'Échange introuvable'], 404);
+        }
+
         try {
             /** @var AcceptExchangeDTO $dto */
             $dto = $this->serializer->deserialize(
@@ -108,7 +114,6 @@ class ExchangeController extends AbstractController
 
             $exchange = $this->exchangeService->acceptExchange($exchange, $this->getUser(), $dto);
 
-            // ✅ Utilisation des serialization groups
             return $this->json([
                 'success' => true,
                 'message' => 'Demande acceptée avec succès',
@@ -145,13 +150,18 @@ class ExchangeController extends AbstractController
     /**
      * Refuser une demande
      */
-    #[Route('/{id}/reject', name: 'exchange_reject', methods: ['PUT'])]
-    public function reject(Exchange $exchange): JsonResponse
+    #[Route('/{uuid}/reject', name: 'exchange_reject', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT'])]
+    public function reject(string $uuid): JsonResponse
     {
+        $exchange = $this->exchangeRepository->findOneByUuid($uuid);
+
+        if (!$exchange) {
+            return $this->json(['error' => 'Échange introuvable'], 404);
+        }
+
         try {
             $exchange = $this->exchangeService->rejectExchange($exchange, $this->getUser());
 
-            // ✅ Retourner l'entité sérialisée
             return $this->json([
                 'success' => true,
                 'message' => 'Demande refusée',
@@ -171,9 +181,15 @@ class ExchangeController extends AbstractController
     /**
      * Annuler une demande
      */
-    #[Route('/{id}/cancel', name: 'exchange_cancel', methods: ['DELETE'])]
-    public function cancel(Exchange $exchange): JsonResponse
+    #[Route('/{uuid}/cancel', name: 'exchange_cancel', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['DELETE'])]
+    public function cancel(string $uuid): JsonResponse
     {
+        $exchange = $this->exchangeRepository->findOneByUuid($uuid);
+
+        if (!$exchange) {
+            return $this->json(['error' => 'Échange introuvable'], 404);
+        }
+
         try {
             $this->exchangeService->cancelExchange($exchange, $this->getUser());
 
@@ -255,9 +271,15 @@ class ExchangeController extends AbstractController
     /**
      * Détail d'un échange
      */
-    #[Route('/{id}', name: 'exchange_show', methods: ['GET'])]
-    public function show(Exchange $exchange): JsonResponse
+    #[Route('/{uuid}', name: 'exchange_show', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
+    public function show(string $uuid): JsonResponse
     {
+        $exchange = $this->exchangeRepository->findOneByUuid($uuid);
+
+        if (!$exchange) {
+            return $this->json(['error' => 'Échange introuvable'], 404);
+        }
+
         $user = $this->getUser();
 
         if ($exchange->getUserRequester() !== $user && $exchange->getUserReceiver() !== $user) {
@@ -267,7 +289,6 @@ class ExchangeController extends AbstractController
             ], Response::HTTP_FORBIDDEN);
         }
 
-        // ✅ Groupe 'exchange:detail' pour plus d'infos
         return $this->json([
             'success' => true,
             'data' => $exchange
@@ -277,13 +298,18 @@ class ExchangeController extends AbstractController
     /**
      * Livres disponibles pour l'échange
      */
-    #[Route('/{id}/available-books', name: 'exchange_available_books', methods: ['GET'])]
-    public function availableBooks(Exchange $exchange): JsonResponse
+    #[Route('/{uuid}/available-books', name: 'exchange_available_books', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
+    public function availableBooks(string $uuid): JsonResponse
     {
+        $exchange = $this->exchangeRepository->findOneByUuid($uuid);
+
+        if (!$exchange) {
+            return $this->json(['error' => 'Échange introuvable'], 404);
+        }
+
         try {
             $books = $this->exchangeService->getAvailableBooks($exchange, $this->getUser());
 
-            // ✅ Utiliser les groups book:read
             return $this->json([
                 'success' => true,
                 'data' => $books
