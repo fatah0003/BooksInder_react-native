@@ -4,13 +4,13 @@ namespace App\Controller;
 
 use App\Entity\Notification;
 use App\Entity\User;
+use App\Exception\UnauthorizedActionException;
 use App\Repository\NotificationRepository;
 use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -64,17 +64,13 @@ class NotificationController extends AbstractController
     }
 
     #[Route('/{id}/read', name: 'notification_mark_read', methods: ['PATCH'])]
-    public function markRead(?Notification $notification): JsonResponse
+    public function markRead(Notification $notification): JsonResponse
     {
-        if (!$notification) {
-            return $this->json(['error' => 'Notification introuvable'], Response::HTTP_NOT_FOUND);
-        }
-
         /** @var User $user */
         $user = $this->getUser();
 
         if ($notification->getUser() !== $user) {
-            return $this->json(['error' => 'Accès non autorisé'], Response::HTTP_FORBIDDEN);
+            throw new UnauthorizedActionException('Accès non autorisé');
         }
 
         $notification->setRead(true);
@@ -101,17 +97,13 @@ class NotificationController extends AbstractController
     }
 
     #[Route('/{id}', name: 'notification_delete', methods: ['DELETE'])]
-    public function delete(?Notification $notification): JsonResponse
+    public function delete(Notification $notification): JsonResponse
     {
-        if (!$notification) {
-            return $this->json(['error' => 'Notification introuvable'], Response::HTTP_NOT_FOUND);
-        }
-
         /** @var User $user */
         $user = $this->getUser();
 
         if ($notification->getUser() !== $user) {
-            return $this->json(['error' => 'Accès non autorisé'], Response::HTTP_FORBIDDEN);
+            throw new UnauthorizedActionException('Accès non autorisé');
         }
 
         $this->em->remove($notification);
@@ -120,7 +112,7 @@ class NotificationController extends AbstractController
         return $this->json([
             'success' => true,
             'message' => 'Notification supprimée'
-        ], Response::HTTP_OK);
+        ]);
     }
 
     #[Route('/clear-read', name: 'notification_clear_read', methods: ['DELETE'])]
@@ -145,17 +137,13 @@ class NotificationController extends AbstractController
     }
 
     #[Route('/{id}', name: 'notification_show', methods: ['GET'])]
-    public function show(?Notification $notification): JsonResponse
+    public function show(Notification $notification): JsonResponse
     {
-        if (!$notification) {
-            return $this->json(['error' => 'Notification introuvable'], Response::HTTP_NOT_FOUND);
-        }
-
         /** @var User $user */
         $user = $this->getUser();
 
         if ($notification->getUser() !== $user) {
-            return $this->json(['error' => 'Accès non autorisé'], Response::HTTP_FORBIDDEN);
+            throw new UnauthorizedActionException('Accès non autorisé');
         }
 
         // Marquer comme lue automatiquement

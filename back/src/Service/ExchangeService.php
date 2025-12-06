@@ -9,17 +9,16 @@ use App\Entity\User;
 use App\Enum\BookStatusEnum;
 use App\Enum\ExchangeStatusEnum;
 use App\Enum\ExchangeTypeEnum;
+use App\Exception\BusinessValidationException;
+use App\Exception\UnauthorizedActionException;
 use App\Repository\BookRepository;
-use App\Repository\ExchangeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class ExchangeService
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly ExchangeRepository $exchangeRepository,
         private readonly BookRepository $bookRepository,
         private readonly NotificationService $notificationService,
         private readonly LoggerInterface $logger
@@ -34,16 +33,16 @@ class ExchangeService
         $bookOne = $this->bookRepository->find($dto->bookOneId);
 
         if (!$bookOne) {
-            throw new \InvalidArgumentException('Livre introuvable');
+            throw new BusinessValidationException('Livre introuvable');
         }
 
         // Vérifications métier
         if ($bookOne->getUser() === $requester) {
-            throw new \InvalidArgumentException('Vous ne pouvez pas demander un échange avec votre propre livre');
+            throw new BusinessValidationException('Vous ne pouvez pas demander un échange avec votre propre livre');
         }
 
         if ($bookOne->getBookStatus() !== BookStatusEnum::ACTIVE) {
-            throw new \InvalidArgumentException('Ce livre n\'est pas disponible pour un échange');
+            throw new BusinessValidationException('Ce livre n\'est pas disponible pour un échange');
         }
 
         // ✅ Récupérer automatiquement le receiver via le propriétaire du livre
@@ -87,30 +86,30 @@ class ExchangeService
     {
         // ✅ TOUTES les validations AVANT la transaction
         if ($exchange->getUserReceiver() !== $user) {
-            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à accepter cette demande');
+            throw new UnauthorizedActionException('Vous n\'êtes pas autorisé à accepter cette demande');
         }
 
         if ($exchange->getStatus() !== ExchangeStatusEnum::PENDING) {
-            throw new \InvalidArgumentException('Cette demande a déjà été traitée');
+            throw new BusinessValidationException('Cette demande a déjà été traitée');
         }
 
         $bookTwo = $this->bookRepository->find($dto->bookTwoId);
         if (!$bookTwo) {
-            throw new \InvalidArgumentException('Livre sélectionné introuvable');
+            throw new BusinessValidationException('Livre sélectionné introuvable');
         }
 
         if ($bookTwo->getUser() !== $exchange->getUserRequester()) {
-            throw new \InvalidArgumentException('Le livre sélectionné n\'appartient pas au demandeur');
+            throw new BusinessValidationException('Le livre sélectionné n\'appartient pas au demandeur');
         }
 
         if ($bookTwo->getBookStatus() !== BookStatusEnum::ACTIVE) {
-            throw new \InvalidArgumentException('Le livre sélectionné n\'est pas disponible');
+            throw new BusinessValidationException('Le livre sélectionné n\'est pas disponible');
         }
 
         try {
             $exchangeType = ExchangeTypeEnum::from($dto->exchangeType);
         } catch (\ValueError $e) {
-            throw new \InvalidArgumentException('Type d\'échange invalide');
+            throw new BusinessValidationException('Type d\'échange invalide');
         }
 
         // ✅ Transaction UNIQUEMENT pour les opérations base de données
@@ -156,11 +155,11 @@ class ExchangeService
     public function rejectExchange(Exchange $exchange, User $user): Exchange
     {
         if ($exchange->getUserReceiver() !== $user) {
-            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à refuser cette demande');
+            throw new UnauthorizedActionException('Vous n\'êtes pas autorisé à refuser cette demande');
         }
 
         if ($exchange->getStatus() !== ExchangeStatusEnum::PENDING) {
-            throw new \InvalidArgumentException('Cette demande a déjà été traitée');
+            throw new BusinessValidationException('Cette demande a déjà été traitée');
         }
 
         $exchange->setStatus(ExchangeStatusEnum::REJECTED);
@@ -189,11 +188,11 @@ class ExchangeService
     public function cancelExchange(Exchange $exchange, User $user): void
     {
         if ($exchange->getUserRequester() !== $user) {
-            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à annuler cette demande');
+            throw new UnauthorizedActionException('Vous n\'êtes pas autorisé à annuler cette demande');
         }
 
         if ($exchange->getStatus() === ExchangeStatusEnum::REJECTED) {
-            throw new \InvalidArgumentException('Impossible d\'annuler une demande déjà refusée');
+            throw new BusinessValidationException('Impossible d\'annuler une demande déjà refusée');
         }
 
         $exchangeId = $exchange->getId();
@@ -243,11 +242,11 @@ class ExchangeService
     public function getAvailableBooks(Exchange $exchange, User $user): array
     {
         if ($exchange->getUserReceiver() !== $user) {
-            throw new AccessDeniedHttpException('Accès non autorisé');
+            throw new UnauthorizedActionException('Accès non autorisé');
         }
 
         if ($exchange->getStatus() !== ExchangeStatusEnum::PENDING) {
-            throw new \InvalidArgumentException('Cette demande a déjà été traitée');
+            throw new BusinessValidationException('Cette demande a déjà été traitée');
         }
 
         return $this->bookRepository->findBy([

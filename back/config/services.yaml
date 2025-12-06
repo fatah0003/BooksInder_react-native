@@ -27,5 +27,10 @@ services:
         tags:
             - { name: kernel.event_subscriber }
 
+    # Service explicit pour l'ExceptionSubscriber
+    App\EventSubscriber\ExceptionSubscriber:
+        arguments:
+            $environment: '%kernel.environment%'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

@@ -4,16 +4,15 @@ namespace App\Controller;
 
 use App\DTO\User\UpdateUserDTO;
 use App\Entity\User;
+use App\Exception\ResourceNotFoundException;
+use App\Exception\UnauthorizedActionException;
 use App\Repository\UserRepository;
 use App\Service\UserService;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/api/users', name: 'api_users_')]
@@ -29,8 +28,9 @@ class UserController extends AbstractController
     #[IsGranted('ROLE_ADMIN')]
     public function index(): JsonResponse
     {
-        // keep this as before (repo injection or service listing method)
-        return $this->json($this->getDoctrine()->getRepository(User::class)->findAll(), 200, [], ['groups' => 'user:read']);
+        $users = $this->userRepository->findAll();
+
+        return $this->json($users, 200, [], ['groups' => 'user:read']);
     }
 
     #[Route('/{uuid}', name: 'show', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
@@ -39,7 +39,7 @@ class UserController extends AbstractController
         $user = $this->userRepository->findOneByUuid($uuid);
 
         if (!$user) {
-            return $this->json(['error' => 'Utilisateur introuvable'], 404);
+            throw new ResourceNotFoundException('Utilisateur', $uuid);
         }
 
         return $this->json([
@@ -54,29 +54,29 @@ class UserController extends AbstractController
         $user = $this->userRepository->findOneByUuid($uuid);
 
         if (!$user) {
-            return $this->json(['error' => 'Utilisateur introuvable'], 404);
+            throw new ResourceNotFoundException('Utilisateur', $uuid);
         }
 
-        // Vérifier que l'utilisateur connecté modifie son propre profil
-        if ($this->getUser() !== $user && !in_array('ROLE_ADMIN', $this->getUser()->getRoles())) {
-            return $this->json(['error' => 'Accès refusé'], 403);
+        // Vérifier que l'utilisateur connecté modifie son propre profil ou est admin
+        $currentUser = $this->getUser();
+        if ($currentUser !== $user && !in_array('ROLE_ADMIN', $currentUser->getRoles(), true)) {
+            throw new UnauthorizedActionException('Accès refusé');
         }
 
-        try {
-            /** @var UpdateUserDTO $dto */
-            $dto = $this->serializer->deserialize($request->getContent(), UpdateUserDTO::class, 'json');
+        /** @var UpdateUserDTO $dto */
+        $dto = $this->serializer->deserialize(
+            $request->getContent(),
+            UpdateUserDTO::class,
+            'json'
+        );
 
-            $user = $this->userService->updateFromDTO($user, $dto);
+        $user = $this->userService->updateFromDTO($user, $dto);
 
-            return $this->json($user, 200, [], ['groups' => 'user:read']);
-        } catch (BadRequestHttpException $e) {
-            $payload = json_decode($e->getMessage(), true);
-            return $this->json(['success' => false, 'errors' => $payload ?: $e->getMessage()], 400);
-        } catch (\Exception $e) {
-            return $this->json(['success' => false, 'error' => 'Erreur serveur'], 500);
-        }
+        return $this->json([
+            'success' => true,
+            'data' => $user
+        ], 200, [], ['groups' => 'user:read']);
     }
-
 
     #[Route('/{uuid}', name: 'delete', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['DELETE'])]
     public function delete(string $uuid): JsonResponse
@@ -84,12 +84,12 @@ class UserController extends AbstractController
         $user = $this->userRepository->findOneByUuid($uuid);
 
         if (!$user) {
-            return $this->json(['error' => 'Utilisateur introuvable'], 404);
+            throw new ResourceNotFoundException('Utilisateur', $uuid);
         }
 
-        // Vérifier permissions
-        if ($this->getUser() !== $user && !in_array('ROLE_ADMIN', $this->getUser()->getRoles())) {
-            return $this->json(['error' => 'Accès refusé'], 403);
+        $currentUser = $this->getUser();
+        if ($currentUser !== $user && !in_array('ROLE_ADMIN', $currentUser->getRoles(), true)) {
+            throw new UnauthorizedActionException('Accès refusé');
         }
 
         $this->userService->delete($user);

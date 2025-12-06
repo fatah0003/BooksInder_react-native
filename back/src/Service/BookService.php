@@ -6,10 +6,10 @@ use App\DTO\Book\CreateBookDTO;
 use App\DTO\Book\UpdateBookDTO;
 use App\Entity\Book;
 use App\Entity\User;
+use App\Exception\UnauthorizedActionException;
 use App\Repository\BookRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 
@@ -41,7 +41,7 @@ class BookService
             'search' => isset($query['search']) ? trim($query['search']) : null,
         ]);
 
-        // ----- Tri -----
+        // Tri
         $allowedOrderBy = ['id', 'title', 'author', 'createdAt', 'updatedAt', 'pages'];
 
         $orderBy = $query['orderBy'] ?? 'createdAt';
@@ -60,55 +60,45 @@ class BookService
         return compact('page', 'limit', 'filters');
     }
 
-
     /**
      * Récupère les livres paginés avec cache
      */
     public function getPaginatedBooks(int $page, int $limit, array $filters): array
     {
-        try {
-            $books = $this->bookRepository->findPaginated($page, $limit, $filters);
+        $books = $this->bookRepository->findPaginated($page, $limit, $filters);
 
-            // Cache pour le count total
-            $cacheKey = 'books_count_' . md5(serialize($filters));
-            $totalItems = $this->cache->get($cacheKey, function (ItemInterface $item) use ($filters) {
-                $item->expiresAfter(self::CACHE_TTL);
-                return $this->bookRepository->countWithFilters($filters);
-            });
+        // Cache pour le count total
+        $cacheKey = 'books_count_' . md5(serialize($filters));
+        $totalItems = $this->cache->get($cacheKey, function (ItemInterface $item) use ($filters) {
+            $item->expiresAfter(self::CACHE_TTL);
+            return $this->bookRepository->countWithFilters($filters);
+        });
 
-            $totalPages = (int)ceil($totalItems / $limit);
+        $totalPages = (int)ceil($totalItems / $limit);
 
-            return [
-                'success' => true,
-                'data' => $books,
-                'pagination' => [
-                    'currentPage' => $page,
-                    'itemsPerPage' => $limit,
-                    'totalItems' => $totalItems,
-                    'totalPages' => $totalPages,
-                    'hasNextPage' => $page < $totalPages,
-                    'hasPreviousPage' => $page > 1,
-                    'nextPage' => $page < $totalPages ? $page + 1 : null,
-                    'previousPage' => $page > 1 ? $page - 1 : null,
-                ],
-                'filters' => array_filter(
-                    $filters,
-                    fn($key) => !in_array($key, ['orderBy', 'order']),
-                    ARRAY_FILTER_USE_KEY
-                ),
-                'sort' => [
-                    'orderBy' => $filters['orderBy'],
-                    'order' => $filters['order'],
-                ],
-            ];
-        } catch (\Exception $e) {
-            $this->logger->error('Erreur récupération livres', [
-                'error' => $e->getMessage(),
-                'filters' => $filters,
-            ]);
-
-            throw $e;
-        }
+        return [
+            'success' => true,
+            'data' => $books,
+            'pagination' => [
+                'currentPage' => $page,
+                'itemsPerPage' => $limit,
+                'totalItems' => $totalItems,
+                'totalPages' => $totalPages,
+                'hasNextPage' => $page < $totalPages,
+                'hasPreviousPage' => $page > 1,
+                'nextPage' => $page < $totalPages ? $page + 1 : null,
+                'previousPage' => $page > 1 ? $page - 1 : null,
+            ],
+            'filters' => array_filter(
+                $filters,
+                fn($key) => !in_array($key, ['orderBy', 'order']),
+                ARRAY_FILTER_USE_KEY
+            ),
+            'sort' => [
+                'orderBy' => $filters['orderBy'],
+                'order' => $filters['order'],
+            ],
+        ];
     }
 
     /**
@@ -147,7 +137,7 @@ class BookService
     {
         // Vérification des droits
         if ($book->getUser() !== $user && !in_array('ROLE_ADMIN', $user->getRoles())) {
-            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à modifier ce livre');
+            throw new UnauthorizedActionException('Vous n\'êtes pas autorisé à modifier ce livre');
         }
 
         // Mise à jour uniquement des champs fournis
@@ -199,7 +189,7 @@ class BookService
     public function deleteBook(Book $book, User $user): void
     {
         if ($book->getUser() !== $user && !in_array('ROLE_ADMIN', $user->getRoles())) {
-            throw new AccessDeniedHttpException('Vous n\'êtes pas autorisé à supprimer ce livre');
+            throw new UnauthorizedActionException('Vous n\'êtes pas autorisé à supprimer ce livre');
         }
 
         $bookId = $book->getId();

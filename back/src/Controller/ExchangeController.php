@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\DTO\Exchange\AcceptExchangeDTO;
 use App\DTO\Exchange\CreateExchangeDTO;
-use App\Entity\Exchange;
 use App\Enum\ExchangeStatusEnum;
 use App\Service\ExchangeService;
 use App\Repository\ExchangeRepository;
@@ -13,23 +12,26 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use App\Exception\ResourceNotFoundException;
+use App\Exception\BusinessValidationException;
+use App\Exception\UnauthorizedActionException;
 
 #[Route('/api/exchanges')]
 #[IsGranted('ROLE_USER')]
 class ExchangeController extends AbstractController
 {
     public function __construct(
-        private readonly ExchangeService $exchangeService,
-        private readonly ExchangeRepository $exchangeRepository,
+        private readonly ExchangeService     $exchangeService,
+        private readonly ExchangeRepository  $exchangeRepository,
         private readonly SerializerInterface $serializer,
-        private readonly ValidatorInterface $validator,
-        private readonly LoggerInterface $logger
-    ) {}
+        private readonly ValidatorInterface  $validator
+    )
+    {
+    }
 
     /**
      * Créer une demande d'échange
@@ -37,182 +39,106 @@ class ExchangeController extends AbstractController
     #[Route('', name: 'exchange_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        try {
-            /** @var CreateExchangeDTO $dto */
-            $dto = $this->serializer->deserialize(
-                $request->getContent(),
-                CreateExchangeDTO::class,
-                'json'
-            );
+        /** @var CreateExchangeDTO $dto */
+        $dto = $this->serializer->deserialize(
+            $request->getContent(),
+            CreateExchangeDTO::class,
+            'json'
+        );
 
-            $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
-                $errorMessages = [];
-                foreach ($errors as $error) {
-                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
-                }
-                return $this->json([
-                    'success' => false,
-                    'errors' => $errorMessages
-                ], Response::HTTP_BAD_REQUEST);
+        $errors = $this->validator->validate($dto);
+        if (count($errors) > 0) {
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
             }
-
-            $exchange = $this->exchangeService->createExchange($this->getUser(), $dto);
-
-            return $this->json([
-                'success' => true,
-                'message' => 'Demande d\'échange créée avec succès',
-                'data' => $exchange
-            ], Response::HTTP_CREATED, [], ['groups' => 'exchange:read']);
-
-        } catch (\InvalidArgumentException $e) {
             return $this->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'errors' => $errorMessages
             ], Response::HTTP_BAD_REQUEST);
-
-        } catch (\Exception $e) {
-            $this->logger->error('Erreur création échange', ['error' => $e->getMessage()]);
-            return $this->json([
-                'success' => false,
-                'error' => 'Une erreur est survenue'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+
+        $exchange = $this->exchangeService->createExchange($this->getUser(), $dto);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Demande d\'échange créée avec succès',
+            'data' => $exchange
+        ], Response::HTTP_CREATED, [], ['groups' => 'exchange:read']);
     }
 
-    /**
-     * Accepter une demande
-     */
     #[Route('/{uuid}/accept', name: 'exchange_accept', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT'])]
     public function accept(string $uuid, Request $request): JsonResponse
     {
         $exchange = $this->exchangeRepository->findOneByUuid($uuid);
 
         if (!$exchange) {
-            return $this->json(['error' => 'Échange introuvable'], 404);
+            throw new ResourceNotFoundException('Échange', $uuid);
         }
 
-        try {
-            /** @var AcceptExchangeDTO $dto */
-            $dto = $this->serializer->deserialize(
-                $request->getContent(),
-                AcceptExchangeDTO::class,
-                'json'
-            );
+        /** @var AcceptExchangeDTO $dto */
+        $dto = $this->serializer->deserialize(
+            $request->getContent(),
+            AcceptExchangeDTO::class,
+            'json'
+        );
 
-            $errors = $this->validator->validate($dto);
-            if (count($errors) > 0) {
-                $errorMessages = [];
-                foreach ($errors as $error) {
-                    $errorMessages[$error->getPropertyPath()] = $error->getMessage();
-                }
-                return $this->json([
-                    'success' => false,
-                    'errors' => $errorMessages
-                ], Response::HTTP_BAD_REQUEST);
+        $errors = $this->validator->validate($dto);
+        if (count($errors) > 0) {
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[$error->getPropertyPath()] = $error->getMessage();
             }
-
-            $exchange = $this->exchangeService->acceptExchange($exchange, $this->getUser(), $dto);
-
-            return $this->json([
-                'success' => true,
-                'message' => 'Demande acceptée avec succès',
-                'data' => $exchange
-            ], 200, [], ['groups' => 'exchange:detail']);
-
-        } catch (AccessDeniedHttpException $e) {
             return $this->json([
                 'success' => false,
-                'error' => $e->getMessage()
-            ], Response::HTTP_FORBIDDEN);
-
-        } catch (\InvalidArgumentException $e) {
-            return $this->json([
-                'success' => false,
-                'error' => $e->getMessage()
+                'errors' => $errorMessages
             ], Response::HTTP_BAD_REQUEST);
-
-        } catch (\RuntimeException $e) {
-            return $this->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-
-        } catch (\Exception $e) {
-            $this->logger->error('Erreur acceptation échange', ['error' => $e->getMessage()]);
-            return $this->json([
-                'success' => false,
-                'error' => 'Une erreur est survenue'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+
+        $exchange = $this->exchangeService->acceptExchange($exchange, $this->getUser(), $dto);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Demande acceptée avec succès',
+            'data' => $exchange
+        ], 200, [], ['groups' => 'exchange:detail']);
     }
 
-    /**
-     * Refuser une demande
-     */
     #[Route('/{uuid}/reject', name: 'exchange_reject', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT'])]
     public function reject(string $uuid): JsonResponse
     {
         $exchange = $this->exchangeRepository->findOneByUuid($uuid);
 
         if (!$exchange) {
-            return $this->json(['error' => 'Échange introuvable'], 404);
+            throw new ResourceNotFoundException('Échange', $uuid);
         }
 
-        try {
-            $exchange = $this->exchangeService->rejectExchange($exchange, $this->getUser());
+        $exchange = $this->exchangeService->rejectExchange($exchange, $this->getUser());
 
-            return $this->json([
-                'success' => true,
-                'message' => 'Demande refusée',
-                'data' => $exchange
-            ], 200, [], ['groups' => 'exchange:read']);
-
-        } catch (AccessDeniedHttpException $e) {
-            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
-        } catch (\InvalidArgumentException $e) {
-            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        } catch (\Exception $e) {
-            $this->logger->error('Erreur refus échange', ['error' => $e->getMessage()]);
-            return $this->json(['success' => false, 'error' => 'Une erreur est survenue'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return $this->json([
+            'success' => true,
+            'message' => 'Demande refusée',
+            'data' => $exchange
+        ], 200, [], ['groups' => 'exchange:read']);
     }
 
-    /**
-     * Annuler une demande
-     */
     #[Route('/{uuid}/cancel', name: 'exchange_cancel', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['DELETE'])]
     public function cancel(string $uuid): JsonResponse
     {
         $exchange = $this->exchangeRepository->findOneByUuid($uuid);
 
         if (!$exchange) {
-            return $this->json(['error' => 'Échange introuvable'], 404);
+            throw new ResourceNotFoundException('Échange', $uuid);
         }
 
-        try {
-            $this->exchangeService->cancelExchange($exchange, $this->getUser());
+        $this->exchangeService->cancelExchange($exchange, $this->getUser());
 
-            return $this->json([
-                'success' => true,
-                'message' => 'Demande annulée avec succès'
-            ]);
-
-        } catch (AccessDeniedHttpException $e) {
-            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
-        } catch (\InvalidArgumentException $e) {
-            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        } catch (\RuntimeException $e) {
-            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-        } catch (\Exception $e) {
-            $this->logger->error('Erreur annulation échange', ['error' => $e->getMessage()]);
-            return $this->json(['success' => false, 'error' => 'Une erreur est survenue'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return $this->json([
+            'success' => true,
+            'message' => 'Demande annulée avec succès'
+        ]);
     }
 
-    /**
-     * Liste demandes reçues
-     */
     #[Route('/received', name: 'exchange_received', methods: ['GET'])]
     public function received(Request $request): JsonResponse
     {
@@ -220,27 +146,23 @@ class ExchangeController extends AbstractController
         $status = $request->query->get('status');
         $limit = $request->query->getInt('limit', 10);
 
-        try {
-            if ($status) {
+        if ($status) {
+            try {
                 $statusEnum = ExchangeStatusEnum::from($status);
-                $exchanges = $this->exchangeRepository->findReceivedByStatus($user, $statusEnum, $limit);
-            } else {
-                $exchanges = $this->exchangeRepository->findLatestReceivedRequests($user, $limit);
+            } catch (\ValueError) {
+                throw new BusinessValidationException('Statut invalide');
             }
-
-            return $this->json([
-                'success' => true,
-                'data' => $exchanges
-            ], 200, [], ['groups' => 'exchange:read']);
-
-        } catch (\ValueError $e) {
-            return $this->json(['success' => false, 'error' => 'Statut invalide'], Response::HTTP_BAD_REQUEST);
+            $exchanges = $this->exchangeRepository->findReceivedByStatus($user, $statusEnum, $limit);
+        } else {
+            $exchanges = $this->exchangeRepository->findLatestReceivedRequests($user, $limit);
         }
+
+        return $this->json([
+            'success' => true,
+            'data' => $exchanges
+        ], 200, [], ['groups' => 'exchange:read']);
     }
 
-    /**
-     * Liste demandes envoyées
-     */
     #[Route('/sent', name: 'exchange_sent', methods: ['GET'])]
     public function sent(Request $request): JsonResponse
     {
@@ -253,9 +175,6 @@ class ExchangeController extends AbstractController
         ], 200, [], ['groups' => 'exchange:read']);
     }
 
-    /**
-     * Liste échanges complétés
-     */
     #[Route('/completed', name: 'exchange_completed', methods: ['GET'])]
     public function completed(Request $request): JsonResponse
     {
@@ -268,25 +187,19 @@ class ExchangeController extends AbstractController
         ], 200, [], ['groups' => 'exchange:read']);
     }
 
-    /**
-     * Détail d'un échange
-     */
     #[Route('/{uuid}', name: 'exchange_show', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
     public function show(string $uuid): JsonResponse
     {
         $exchange = $this->exchangeRepository->findOneByUuid($uuid);
 
         if (!$exchange) {
-            return $this->json(['error' => 'Échange introuvable'], 404);
+            throw new ResourceNotFoundException('Échange', $uuid);
         }
 
         $user = $this->getUser();
 
         if ($exchange->getUserRequester() !== $user && $exchange->getUserReceiver() !== $user) {
-            return $this->json([
-                'success' => false,
-                'error' => 'Accès non autorisé'
-            ], Response::HTTP_FORBIDDEN);
+            throw new UnauthorizedActionException('Accès non autorisé à cet échange');
         }
 
         return $this->json([
@@ -295,30 +208,21 @@ class ExchangeController extends AbstractController
         ], 200, [], ['groups' => 'exchange:detail']);
     }
 
-    /**
-     * Livres disponibles pour l'échange
-     */
     #[Route('/{uuid}/available-books', name: 'exchange_available_books', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
     public function availableBooks(string $uuid): JsonResponse
     {
         $exchange = $this->exchangeRepository->findOneByUuid($uuid);
 
         if (!$exchange) {
-            return $this->json(['error' => 'Échange introuvable'], 404);
+            throw new ResourceNotFoundException('Échange', $uuid);
         }
 
-        try {
-            $books = $this->exchangeService->getAvailableBooks($exchange, $this->getUser());
+        $books = $this->exchangeService->getAvailableBooks($exchange, $this->getUser());
 
-            return $this->json([
-                'success' => true,
-                'data' => $books
-            ], 200, [], ['groups' => 'book:read']);
+        return $this->json([
+            'success' => true,
+            'data' => $books
+        ], 200, [], ['groups' => 'book:read']);
 
-        } catch (AccessDeniedHttpException $e) {
-            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_FORBIDDEN);
-        } catch (\InvalidArgumentException $e) {
-            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
     }
 }
