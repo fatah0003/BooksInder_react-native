@@ -14,6 +14,7 @@ use App\Exception\UnauthorizedActionException;
 use App\Repository\BookRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use App\Service\ChatService;
 
 class ExchangeService
 {
@@ -21,7 +22,8 @@ class ExchangeService
         private readonly EntityManagerInterface $em,
         private readonly BookRepository $bookRepository,
         private readonly NotificationService $notificationService,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly ChatService $chatService,
     ) {}
 
     /**
@@ -45,13 +47,13 @@ class ExchangeService
             throw new BusinessValidationException('Ce livre n\'est pas disponible pour un échange');
         }
 
-        // ✅ Récupérer automatiquement le receiver via le propriétaire du livre
+        //Récupérer automatiquement le receiver via le propriétaire du livre
         $receiver = $bookOne->getUser();
 
         // Créer l'échange
         $exchange = new Exchange();
         $exchange->setUserRequester($requester);
-        $exchange->setUserReceiver($receiver);  // ✅ Automatique !
+        $exchange->setUserReceiver($receiver);  // Automatique !
         $exchange->setBookOne($bookOne);
         $exchange->setStatus(ExchangeStatusEnum::PENDING);
         // exchangeType et bookTwo restent null jusqu'à l'acceptation
@@ -84,7 +86,7 @@ class ExchangeService
      */
     public function acceptExchange(Exchange $exchange, User $user, AcceptExchangeDTO $dto): Exchange
     {
-        // ✅ TOUTES les validations AVANT la transaction
+        // TOUTES les validations AVANT la transaction
         if ($exchange->getUserReceiver() !== $user) {
             throw new UnauthorizedActionException('Vous n\'êtes pas autorisé à accepter cette demande');
         }
@@ -112,7 +114,7 @@ class ExchangeService
             throw new BusinessValidationException('Type d\'échange invalide');
         }
 
-        // ✅ Transaction UNIQUEMENT pour les opérations base de données
+        // Transaction UNIQUEMENT pour les opérations base de données
         try {
             $this->em->wrapInTransaction(function () use ($exchange, $bookTwo, $exchangeType) {
                 $exchange->setBookTwo($bookTwo);
@@ -132,11 +134,22 @@ class ExchangeService
             throw new \RuntimeException('Erreur lors de la validation de l\'échange', 0, $e);
         }
 
-        // ✅ Notification APRÈS la transaction réussie
+        // Création / récupération de la conversation après validation
+        try {
+            $this->chatService->createConversationFromExchange($exchange->getId());
+        } catch (\Throwable $e) {
+            $this->logger->error('Erreur lors de la création de la conversation de chat', [
+                'exchangeId' => $exchange->getId(),
+                'error' => $e->getMessage(),
+            ]);
+            // on log seulement, on ne casse pas l’acceptation de l’échange
+        }
+
+        // Notification APRÈS la transaction réussie
         try {
             $this->notificationService->notifyExchangeAccepted($exchange);
         } catch (\Exception $e) {
-            // ⚠️ Log l'erreur mais ne bloque pas l'acceptation
+            // Log l'erreur mais ne bloque pas l'acceptation
             $this->logger->warning('Échec notification acceptation échange', [
                 'exchangeId' => $exchange->getId(),
                 'error' => $e->getMessage(),
@@ -167,7 +180,6 @@ class ExchangeService
 
         $this->em->flush();
 
-        // ✅ Notification APRÈS le flush
         try {
             $this->notificationService->notifyExchangeRejected($exchange);
         } catch (\Exception $e) {
@@ -220,7 +232,7 @@ class ExchangeService
             throw new \RuntimeException('Erreur lors de l\'annulation de l\'échange', 0, $e);
         }
 
-        // ✅ Notification APRÈS la suppression (si c'était en attente)
+        // Notification APRÈS la suppression (si c'était en attente)
         if ($status === ExchangeStatusEnum::PENDING) {
             try {
                 $this->notificationService->notifyExchangeCancelled($exchange);

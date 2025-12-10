@@ -7,12 +7,16 @@ use App\Entity\Notification;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use App\Document\Conversation;
+use App\Document\Message;
+use App\Repository\UserRepository;
 
 class NotificationService
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly UserRepository $userRepository,
     ) {}
 
     /**
@@ -26,7 +30,6 @@ class NotificationService
     ): Notification {
         $notification = new Notification($user, $type, $title, $data);
         $this->em->persist($notification);
-        // ✅ Pas de flush ici, laisse la flexibilité à l'appelant
 
         return $notification;
     }
@@ -52,7 +55,7 @@ class NotificationService
         return $notification;
     }
 
-    // ✅ Helpers métier - utilisent createAndFlushNotification
+    // Helpers métier - utilisent createAndFlushNotification
     public function notifyExchangeRequestReceived(Exchange $exchange): Notification
     {
         $owner = $exchange->getUserReceiver();
@@ -133,4 +136,43 @@ class NotificationService
 
         return $count;
     }
+
+    public function notifyNewChatMessage(Conversation $conversation, Message $message): void
+    {
+        // Trouver le destinataire = l’autre participant
+        $recipientUuid = null;
+        foreach ($conversation->getParticipants() as $uuid) {
+            if ($uuid !== $message->getSenderUuid()) {
+                $recipientUuid = $uuid;
+                break;
+            }
+        }
+
+        if (!$recipientUuid) {
+            return;
+        }
+
+        $recipient = $this->userRepository->findOneBy(['uuid' => $recipientUuid]);
+        if (!$recipient) {
+            return;
+        }
+
+        $title = "Nouveau message dans un échange de livres";
+        $data = [
+            'conversationId' => $conversation->getId(),
+            'exchangeId' => $conversation->getExchangeId(),
+            'exchangeUuid' => $conversation->getExchangeUuid(),
+            'senderUuid' => $message->getSenderUuid(),
+            'messageId' => $message->getId(),
+        ];
+
+        // On crée une notification interne, comme pour les échanges
+        $this->createAndFlushNotification(
+            $recipient,
+            NotificationTypeEnum::MESSAGE_RECEIVED,
+            $title,
+            $data
+        );
+    }
+
 }

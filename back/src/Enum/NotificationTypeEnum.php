@@ -8,6 +8,6 @@ enum NotificationTypeEnum: string
     case EXCHANGE_REJECTED = 'exchange_rejected';
     case EXCHANGE_CANCELLED = 'exchange_cancelled';
     case EXCHANGE_RETURN_REMINDER = 'exchange_return_reminder';
-    case MESSAGE_RECEIVED = 'message_received'; // pour plus tard
+    case MESSAGE_RECEIVED = 'message_received';
 }
 
