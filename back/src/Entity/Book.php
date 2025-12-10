@@ -84,6 +84,10 @@ class Book
     #[Groups(['book:read', 'book:write', 'user:read'])]
     private array $availableExchangeTypes = [];
 
+    #[ORM\OneToMany(targetEntity: Image::class, mappedBy: 'book', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['book:read'])]
+    private Collection $images;
+
 //    /**
 //     * @var Collection<int, Exchange>
 //     */
@@ -98,6 +102,8 @@ class Book
 //        $this->categorie = [BookCategorieEnum::FICTION]; // valeur par défaut pour éviter une erreur d’énumération vide
         $this->state = StateEnum::GOOD;
         $this->bookStatus = BookStatusEnum::ACTIVE;
+        $this->uuid = Uuid::v4()->toRfc4122();
+        $this->images = new ArrayCollection();
 //        $this->exchagedBook = new ArrayCollection();
     }
 
@@ -179,4 +185,44 @@ public function setAvailableExchangeTypes(array $availableExchangeTypes): static
 
     return $this;
 }
+
+    public function getImages(): Collection
+    {
+        return $this->images;
+    }
+
+    public function addImage(Image $image): self
+    {
+        if (!$this->images->contains($image)) {
+            $this->images->add($image);
+            $image->setBook($this);
+        }
+        return $this;
+    }
+
+    public function removeImage(Image $image): self
+    {
+        if ($this->images->removeElement($image)) {
+            if ($image->getBook() === $this) {
+                $image->setBook(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Helper pour récupérer l'image front
+     */
+    public function getCoverFront(): ?Image
+    {
+        return $this->images->filter(fn(Image $img) => $img->getType() === 'front')->first() ?: null;
+    }
+
+    /**
+     * Helper pour récupérer l'image back
+     */
+    public function getCoverBack(): ?Image
+    {
+        return $this->images->filter(fn(Image $img) => $img->getType() === 'back')->first() ?: null;
+    }
 }

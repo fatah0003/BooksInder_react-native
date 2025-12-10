@@ -14,6 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+
 
 #[Route('/api/books', name: 'api_books_')]
 class BookController extends AbstractController
@@ -157,5 +159,63 @@ class BookController extends AbstractController
             'success' => true,
             'message' => 'Livre supprimé avec succès'
         ]);
+    }
+
+    /**
+     * Upload cover front (image avant)
+     */
+    #[Route('/{uuid}/cover-front', name: 'upload_cover_front', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['POST'])]
+    public function uploadCoverFront(string $uuid, Request $request): JsonResponse
+    {
+        $book = $this->bookRepository->findOneByUuid($uuid);
+
+        if (!$book) {
+            throw new ResourceNotFoundException('Livre', $uuid);
+        }
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('file');
+        if (!$file) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Aucun fichier fourni (champ "file" requis)'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->bookService->updateBookCover($book, $this->getUser(), $file, 'front');
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Image de couverture avant mise à jour',
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Upload cover back (image arrière)
+     */
+    #[Route('/{uuid}/cover-back', name: 'upload_cover_back', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['POST'])]
+    public function uploadCoverBack(string $uuid, Request $request): JsonResponse
+    {
+        $book = $this->bookRepository->findOneByUuid($uuid);
+
+        if (!$book) {
+            throw new ResourceNotFoundException('Livre', $uuid);
+        }
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('file');
+        if (!$file) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Aucun fichier fourni (champ "file" requis)'
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->bookService->updateBookCover($book, $this->getUser(), $file, 'back');
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Image de couverture arrière mise à jour',
+        ], Response::HTTP_OK);
     }
 }

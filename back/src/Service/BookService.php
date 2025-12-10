@@ -12,6 +12,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
+use App\Entity\Image;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use App\Exception\BusinessValidationException;
+use Symfony\Component\HttpKernel\KernelInterface;
+
 
 class BookService
 {
@@ -21,7 +26,8 @@ class BookService
         private readonly BookRepository $bookRepository,
         private readonly EntityManagerInterface $em,
         private readonly CacheInterface $cache,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly KernelInterface $kernel,
     ) {}
 
     /**
@@ -199,4 +205,79 @@ class BookService
 
         $this->logger->info('Livre supprimé', ['bookId' => $bookId]);
     }
+
+    /**
+     * Met à jour une image de couverture (front/back) pour un livre
+     */
+    /**
+     * Met à jour une image de couverture (front/back) pour un livre
+     */
+    public function updateBookCover(Book $book, User $user, UploadedFile $file, string $side): void
+    {
+        // Vérification des droits d'accès
+        if ($book->getUser() !== $user && !in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+            throw new UnauthorizedActionException('Vous n\'êtes pas autorisé à modifier les images de ce livre');
+        }
+
+        // Validation du type d'image
+        if (!in_array($side, ['front', 'back'], true)) {
+            throw new BusinessValidationException('Type d\'image invalide (front/back uniquement)');
+        }
+
+        // Validation du fichier
+        $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
+            throw new BusinessValidationException('Format d\'image invalide. Formats acceptés : JPEG, PNG, WEBP');
+        }
+
+        if ($file->getSize() > 5 * 1024 * 1024) { // 5MB
+            throw new BusinessValidationException('L\'image ne doit pas dépasser 5 Mo');
+        }
+
+        // Supprimer l'ancienne image du même type
+        foreach ($book->getImages() as $existingImage) {
+            if ($existingImage->getType() === $side) {
+                $this->em->remove($existingImage);
+            }
+        }
+        $this->em->flush();
+
+        // Préparer le dossier de destination
+        $projectDir = $this->kernel->getProjectDir();
+        $uploadsDir = $projectDir . '/public/uploads/books';
+
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0775, true);
+        }
+
+        // Générer un nom de fichier unique et sécurisé
+        $extension = $file->guessExtension() ?: pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION) ?: 'bin';
+        $filename = sprintf('book_%s_%s.%s', uniqid('', true), $side, $extension);
+
+        // Déplacer le fichier vers le dossier public
+        $file->move($uploadsDir, $filename);
+
+        // Créer la nouvelle entité Image
+        $image = new Image();
+        $image->setType($side);
+        $image->setBook($book);
+        $image->setImageName($filename);
+        $image->setUpdatedAt(new \DateTimeImmutable());
+
+        // Persister les changements
+        $this->em->persist($image);
+        $book->setUpdatedAt(new \DateTimeImmutable());
+        $this->em->flush();
+
+        $this->logger->info('Image de couverture mise à jour', [
+            'bookId' => $book->getId(),
+            'userId' => $user->getId(),
+            'side' => $side,
+            'filename' => $filename
+        ]);
+    }
+
+
+
+
 }
