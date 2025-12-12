@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Document\Conversation;
 use App\Document\Message;
+use App\Entity\User;
 use App\Service\ChatService;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -23,7 +24,7 @@ class ChatController extends AbstractController
     public function listConversations(): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json(['success' => false, 'error' => 'Non authentifié'], 401);
         }
 
@@ -31,7 +32,7 @@ class ChatController extends AbstractController
             ->getRepository(Conversation::class)
             ->findBy(
                 ['participants' => $user->getUuid()],
-                ['lastMessageAt' => -1]
+                ['lastMessageAt' => 'desc']
             );
 
         return $this->json([
@@ -54,7 +55,7 @@ class ChatController extends AbstractController
     public function getMessages(string $id, Request $request): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json(['success' => false, 'error' => 'Non authentifié'], 401);
         }
 
@@ -68,15 +69,15 @@ class ChatController extends AbstractController
             return $this->json(['success' => false, 'error' => 'Accès refusé'], 403);
         }
 
-        $page = max(1, (int) $request->query->get('page', 1));
-        $limit = min(50, (int) $request->query->get('limit', 20));
+        $page = max(1, (int) $request->query->get('page', '1'));
+        $limit = min(50, (int) $request->query->get('limit', '20'));
         $skip = ($page - 1) * $limit;
 
         $messages = $this->dm
             ->getRepository(Message::class)
             ->findBy(
                 ['conversationId' => $id],
-                ['createdAt' => 1],
+                ['createdAt' => 'ASC'],
                 $limit,
                 $skip
             );
@@ -99,7 +100,7 @@ class ChatController extends AbstractController
     public function postMessage(string $id, Request $request): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json(['success' => false, 'error' => 'Non authentifié'], 401);
         }
 

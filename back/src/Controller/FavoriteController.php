@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Favorite;
+use App\Entity\User;
 use App\Exception\ResourceNotFoundException;
 use App\Exception\BusinessValidationException;
 use App\Repository\FavoriteRepository;
@@ -75,7 +76,12 @@ class FavoriteController extends AbstractController
     public function list(): JsonResponse
     {
         $user = $this->getUser();
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('User must be logged in.');
+        }
+
         $favorites = $this->favoriteRepository->findByUser($user);
+
 
         $data = array_map(function(Favorite $favorite) {
             $book = $favorite->getBook();
@@ -106,7 +112,12 @@ class FavoriteController extends AbstractController
     public function check(int $bookId): JsonResponse
     {
         $user = $this->getUser();
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('User must be logged in.');
+        }
+
         $book = $this->bookRepository->find($bookId);
+
 
         if (!$book) {
             throw new ResourceNotFoundException('Livre', (string) $bookId);

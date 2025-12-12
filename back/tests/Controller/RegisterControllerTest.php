@@ -14,6 +14,9 @@ final class RegisterControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
         self::assertResponseHeaderSame('content-type', 'application/json');
+
+        $response = json_decode($client->getResponse()->getContent(), true);
+        self::assertFalse($response['success']);
     }
 
     public function testRegisterRateLimit429(): void
@@ -29,6 +32,9 @@ final class RegisterControllerTest extends WebTestCase
         );
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+
+        $response = json_decode($client->getResponse()->getContent(), true);
+        self::assertFalse($response['success']);
     }
 
     public function testRegisterValidatesContentType(): void
