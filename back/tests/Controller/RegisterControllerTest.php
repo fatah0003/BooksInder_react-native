@@ -44,4 +44,5 @@ final class RegisterControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
     }
+    // je reviesn pour d'autres tests plus poussés
 }

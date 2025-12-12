@@ -28,7 +28,7 @@ class RegisterController extends AbstractController
         if (false === $limiter->consume(1)->isAccepted()) {
             throw new TooManyRequestsHttpException(
                 null,
-                "Trop de tentatives d'inscription. Réessayez plus tard."
+                "Trop de tentatives d'inscription. Réessayez plus tard!"
             );
         }
 

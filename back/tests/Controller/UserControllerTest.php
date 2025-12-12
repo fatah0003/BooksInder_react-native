@@ -53,4 +53,6 @@ final class UserControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
+
+    // je reviens pour ajouter des tests
 }

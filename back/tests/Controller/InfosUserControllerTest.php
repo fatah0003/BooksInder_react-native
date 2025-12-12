@@ -70,4 +70,5 @@ final class InfosUserControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
+    // à revenir ici pour d'autres test plutard
 }

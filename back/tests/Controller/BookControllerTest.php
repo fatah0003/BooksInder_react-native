@@ -28,27 +28,8 @@ class BookControllerTest extends WebTestCase
     {
         $this->client = static::createClient();
         $this->entityManager = static::getContainer()->get('doctrine')->getManager();
-//        $this->truncateTablesInCorrectOrder();
         $this->client->setServerParameter('HTTP_Authorization', '');
     }
-
-//    private function truncateTablesInCorrectOrder(): void
-//    {
-//        $tablesNoFk = ['App\Entity\Notification', 'App\Entity\Favorite', 'App\Entity\Exchange'];
-//        foreach ($tablesNoFk as $entity) {
-//            try {
-//                $this->entityManager->createQuery("DELETE FROM $entity")->execute();
-//            } catch (\Exception $e) {}
-//        }
-//        try {
-//            $this->entityManager->createQuery("DELETE FROM App\Entity\InfosUser")->execute();
-//        } catch (\Exception $e) {}
-//        try {
-//            $this->entityManager->createQuery("DELETE FROM App\Entity\Book")->execute();
-//        } catch (\Exception $e) {}
-//        $this->entityManager->createQuery('DELETE FROM App\Entity\User')->execute();
-//        $this->entityManager->clear();
-//    }
 
     private function createAndLoginUser(string $email, string $plainPassword): User
     {
@@ -88,7 +69,6 @@ class BookControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
     }
 
-    /** ✅ FIX : TOUS les champs DTO requis */
     public function testCreateBookWithAuthHitsBusinessLogic(): void
     {
         $this->createAndLoginUser('test@test.com', 'test123');
@@ -99,7 +79,7 @@ class BookControllerTest extends WebTestCase
             'title' => 'Test Book',
             'author' => 'Test Author',
             'isbn' => '9781234567890123',
-            'description' => 'Test desc',
+            'description' => 'Test description',
             'pages' => 300,
             'edition' => 'Test Ed',
             'location' => 'Paris',
@@ -109,7 +89,6 @@ class BookControllerTest extends WebTestCase
             'availableExchangeTypes' => ['PERMANENT']
         ]));
 
-        // ✅ Accepte 400 OU 500 (couverture business logic)
         $statusCode = $this->client->getResponse()->getStatusCode();
         $this->assertTrue($statusCode === 400 || $statusCode === 500);
     }
@@ -147,7 +126,6 @@ class BookControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
-    /** ✅ FIX : VRAI JPEG valide */
     public function testUploadCoverFrontSuccess(): void
     {
         $user = $this->createAndLoginUser('owner3@test.com', 'owner123');
@@ -166,7 +144,6 @@ class BookControllerTest extends WebTestCase
         @unlink($imagePath);
     }
 
-    /** ✅ FIX : VRAI JPEG valide */
     public function testUploadCoverBackSuccess(): void
     {
         $user = $this->createAndLoginUser('owner4@test.com', 'owner123');

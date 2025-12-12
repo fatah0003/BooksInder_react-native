@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\DTO\User\UpdateUserDTO;
-use App\Entity\User;
 use App\Exception\ResourceNotFoundException;
 use App\Exception\UnauthorizedActionException;
 use App\Repository\UserRepository;

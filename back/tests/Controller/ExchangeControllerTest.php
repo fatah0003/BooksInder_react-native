@@ -50,24 +50,24 @@ class ExchangeControllerTest extends WebTestCase
         $bookRepo = $em->getRepository(Book::class);
 
         // Pour testCreateExchangeWithAuth
-        $this->book1 = $bookRepo->find(7); // user, temporary+permanent
-        $this->book2 = $bookRepo->find(8); // admin, temporary+permanent
+        $this->book1 = $bookRepo->find(7);
+        $this->book2 = $bookRepo->find(8);
 
         // Pour testAcceptExchange
-        $this->book3 = $bookRepo->find(9);  // user, temporary+permanent
-        $this->book4 = $bookRepo->find(10); // admin, temporary+permanent
+        $this->book3 = $bookRepo->find(9);
+        $this->book4 = $bookRepo->find(10);
 
         // Pour testRejectExchange
-        $this->book5 = $bookRepo->find(1); // user, temporary
-        $this->book6 = $bookRepo->find(2); // admin, temporary
+        $this->book5 = $bookRepo->find(1);
+        $this->book6 = $bookRepo->find(2);
 
         // Pour testCancelExchange
-        $this->book7 = $bookRepo->find(3); // user, temporary
-        $this->book8 = $bookRepo->find(4); // admin, permanent
+        $this->book7 = $bookRepo->find(3);
+        $this->book8 = $bookRepo->find(4);
 
         // Pour testShowExchange
-        $this->book9 = $bookRepo->find(5);  // user, permanent
-        $this->book10 = $bookRepo->find(6); // admin, permanent
+        $this->book9 = $bookRepo->find(5);
+        $this->book10 = $bookRepo->find(6);
 
         $this->assertNotNull($this->book1, 'Book #7 manquant');
         $this->assertNotNull($this->book2, 'Book #8 manquant');
@@ -224,7 +224,7 @@ class ExchangeControllerTest extends WebTestCase
             'bookTwoId' => $this->book6->getId(),
         ]));
 
-        // ✅ Vérifier que la création a réussi
+        // Vérifier que la création a réussi
         $this->assertResponseStatusCodeSame(Response::HTTP_CREATED, $this->client->getResponse()->getContent());
         $response = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertTrue($response['success']);
