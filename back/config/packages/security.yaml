@@ -44,8 +44,6 @@ security:
 
         # --- ADMIN ---
         - { path: ^/api/users$, roles: ROLE_ADMIN }
-
-        # ✅ CORRIGÉ : Regex entre guillemets (simples ou doubles)
         - { path: '^/api/users/[0-9a-f-]{36}$', roles: IS_AUTHENTICATED_FULLY }
 
         # --- TOUT LE RESTE REQUIERT AUTHENTIFICATION ---

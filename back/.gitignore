@@ -20,4 +20,4 @@
 ###< lexik/jwt-authentication-bundle ###
 
 /public/uploads/
-/fixtures/images/
+/fixtures/

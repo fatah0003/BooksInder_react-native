@@ -23,6 +23,11 @@ class LoginRateLimitListener implements EventSubscriberInterface
 
     public function onKernelRequest(RequestEvent $event): void
     {
+        //  DÉSACTIVÉ EN TEST
+        if ($_ENV['APP_ENV'] === 'test') {
+            return;
+        }
+
         $request = $event->getRequest();
 
         // Appliquer uniquement sur /api/login en POST
@@ -43,4 +48,5 @@ class LoginRateLimitListener implements EventSubscriberInterface
             ], 429));
         }
     }
+
 }
