@@ -17,7 +17,6 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use App\Exception\BusinessValidationException;
 use Symfony\Component\HttpKernel\KernelInterface;
 
-
 class BookService
 {
     private const CACHE_TTL = 300; // 5 minutes
@@ -28,7 +27,8 @@ class BookService
         private readonly CacheInterface $cache,
         private readonly LoggerInterface $logger,
         private readonly KernelInterface $kernel,
-    ) {}
+    ) {
+    }
 
     /**
      * Construit et normalise les paramètres de requête (filtres + pagination)
@@ -276,8 +276,4 @@ class BookService
             'filename' => $filename
         ]);
     }
-
-
-
-
 }

@@ -20,7 +20,8 @@ class InfosUserController extends AbstractController
         private readonly InfosUserRepository $infosUserRepository,
         private readonly EntityManagerInterface $em,
         private readonly SerializerInterface $serializer
-    ) {}
+    ) {
+    }
 
     #[Route('', name: 'index', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN')]

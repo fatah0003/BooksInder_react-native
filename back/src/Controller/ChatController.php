@@ -18,7 +18,8 @@ class ChatController extends AbstractController
     public function __construct(
         private readonly ChatService $chatService,
         private readonly DocumentManager $dm,
-    ) {}
+    ) {
+    }
 
     #[Route('/conversations', name: 'list_conversations', methods: ['GET'])]
     public function listConversations(): JsonResponse

@@ -18,7 +18,8 @@ class RegisterController extends AbstractController
         private readonly UserService $userService,
         private readonly SerializerInterface $serializer,
         private readonly RateLimiterFactory $registerLimiter
-    ) {}
+    ) {
+    }
 
     #[Route('/api/register', name: 'register', methods: ['POST'])]
     public function register(Request $request): JsonResponse

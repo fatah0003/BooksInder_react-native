@@ -24,7 +24,8 @@ class ExchangeService
         private readonly NotificationService $notificationService,
         private readonly LoggerInterface $logger,
         private readonly ChatService $chatService,
-    ) {}
+    ) {
+    }
 
     /**
      * Crée une demande d'échange

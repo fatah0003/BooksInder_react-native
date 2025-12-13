@@ -23,7 +23,8 @@ class FavoriteController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly FavoriteRepository $favoriteRepository,
         private readonly BookRepository $bookRepository
-    ) {}
+    ) {
+    }
 
     #[Route('/toggle/{bookId}', name: 'favorite_toggle', methods: ['PATCH'])]
     public function toggle(int $bookId): JsonResponse
@@ -83,7 +84,7 @@ class FavoriteController extends AbstractController
         $favorites = $this->favoriteRepository->findByUser($user);
 
 
-        $data = array_map(function(Favorite $favorite) {
+        $data = array_map(function (Favorite $favorite) {
             $book = $favorite->getBook();
             return [
                 'id' => $favorite->getId(),

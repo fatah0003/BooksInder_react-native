@@ -38,42 +38,63 @@ class Conversation
         $this->createdAt = new \DateTime();
     }
 
-    public function getId(): ?string { return $this->id; }
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
 
-    public function getParticipants(): array { return $this->participants; }
+    public function getParticipants(): array
+    {
+        return $this->participants;
+    }
     public function setParticipants(array $participants): self
     {
         $this->participants = $participants;
         return $this;
     }
 
-    public function getExchangeId(): ?int { return $this->exchangeId; }
+    public function getExchangeId(): ?int
+    {
+        return $this->exchangeId;
+    }
     public function setExchangeId(?int $exchangeId): self
     {
         $this->exchangeId = $exchangeId;
         return $this;
     }
 
-    public function getExchangeUuid(): ?string { return $this->exchangeUuid; }
+    public function getExchangeUuid(): ?string
+    {
+        return $this->exchangeUuid;
+    }
     public function setExchangeUuid(?string $exchangeUuid): self
     {
         $this->exchangeUuid = $exchangeUuid;
         return $this;
     }
 
-    public function getLastMessage(): ?string { return $this->lastMessage; }
+    public function getLastMessage(): ?string
+    {
+        return $this->lastMessage;
+    }
     public function setLastMessage(?string $lastMessage): self
     {
         $this->lastMessage = $lastMessage;
         return $this;
     }
 
-    public function getLastMessageAt(): ?\DateTimeInterface { return $this->lastMessageAt; }
+    public function getLastMessageAt(): ?\DateTimeInterface
+    {
+        return $this->lastMessageAt;
+    }
     public function setLastMessageAt(?\DateTimeInterface $lastMessageAt): self
     {
         $this->lastMessageAt = $lastMessageAt;
         return $this;
     }
 
-    public function getCreatedAt(): \DateTime { return $this->createdAt; }
+    public function getCreatedAt(): \DateTime
+    {
+        return $this->createdAt;
+    }
 }

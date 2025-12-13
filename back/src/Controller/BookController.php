@@ -25,7 +25,8 @@ class BookController extends AbstractController
         private readonly BookRepository $bookRepository,
         private readonly SerializerInterface $serializer,
         private readonly ValidatorInterface $validator,
-    ) {}
+    ) {
+    }
 
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse

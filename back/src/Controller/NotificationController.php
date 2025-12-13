@@ -22,7 +22,8 @@ class NotificationController extends AbstractController
         private readonly NotificationRepository $repo,
         private readonly EntityManagerInterface $em,
         private readonly NotificationService $notificationService
-    ) {}
+    ) {
+    }
 
     #[Route('', name: 'notification_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse

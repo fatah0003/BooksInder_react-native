@@ -36,12 +36,30 @@ class Message
         $this->readBy = [];
     }
 
-    public function getId(): ?string { return $this->id; }
-    public function getConversationId(): string { return $this->conversationId; }
-    public function getSenderUuid(): string { return $this->senderUuid; }
-    public function getContent(): string { return $this->content; }
-    public function getCreatedAt(): \DateTime { return $this->createdAt; }
-    public function getReadBy(): array { return $this->readBy; }
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+    public function getConversationId(): string
+    {
+        return $this->conversationId;
+    }
+    public function getSenderUuid(): string
+    {
+        return $this->senderUuid;
+    }
+    public function getContent(): string
+    {
+        return $this->content;
+    }
+    public function getCreatedAt(): \DateTime
+    {
+        return $this->createdAt;
+    }
+    public function getReadBy(): array
+    {
+        return $this->readBy;
+    }
 
     public function addReadBy(string $uuid): self
     {

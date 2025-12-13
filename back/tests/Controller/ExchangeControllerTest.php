@@ -130,7 +130,7 @@ class ExchangeControllerTest extends WebTestCase
 
         $this->client->request('POST', '/api/exchanges', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ], json_encode([
             'bookOneId' => $this->book1->getId(),
             'bookTwoId' => $this->book2->getId(),
@@ -149,7 +149,7 @@ class ExchangeControllerTest extends WebTestCase
 
         $this->client->request('POST', '/api/exchanges', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ], json_encode([
             'bookOneId' => 'invalid', // provoque une erreur de désérialisation
             'bookTwoId' => 2,
@@ -170,7 +170,7 @@ class ExchangeControllerTest extends WebTestCase
         // Création : admin demande échange book1 (user) <-> book2 (admin)
         $this->client->request('POST', '/api/exchanges', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token1,
+            'HTTP_Authorization' => 'Bearer ' . $token1,
         ], json_encode([
             'bookOneId' => $this->book1->getId(), // user
             'bookTwoId' => $this->book2->getId(), // admin
@@ -185,7 +185,7 @@ class ExchangeControllerTest extends WebTestCase
 
         $this->client->request('PUT', "/api/exchanges/{$exchangeUuid}/accept", [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token2,
+            'HTTP_Authorization' => 'Bearer ' . $token2,
         ], json_encode([
             'bookTwoId'    => $this->book2->getId(), // livre admin
             'exchangeType' => 'permanent',
@@ -203,7 +203,7 @@ class ExchangeControllerTest extends WebTestCase
 
         $this->client->request('PUT', '/api/exchanges/00000000-0000-0000-0000-000000000000/accept', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ], json_encode([
             'bookId' => $this->book3->getId(),
         ]));
@@ -218,7 +218,7 @@ class ExchangeControllerTest extends WebTestCase
         // Créer un échange
         $this->client->request('POST', '/api/exchanges', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token1,
+            'HTTP_Authorization' => 'Bearer ' . $token1,
         ], json_encode([
             'bookOneId' => $this->book5->getId(),
             'bookTwoId' => $this->book6->getId(),
@@ -236,7 +236,7 @@ class ExchangeControllerTest extends WebTestCase
         $token2 = $this->loginUser($this->user2);
 
         $this->client->request('PUT', "/api/exchanges/{$exchangeUuid}/reject", [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token2,
+            'HTTP_Authorization' => 'Bearer ' . $token2,
         ]);
 
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
@@ -251,7 +251,7 @@ class ExchangeControllerTest extends WebTestCase
         // Créer un échange
         $this->client->request('POST', '/api/exchanges', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ], json_encode([
             'bookOneId' => $this->book7->getId(),
             'bookTwoId' => $this->book8->getId(),
@@ -266,7 +266,7 @@ class ExchangeControllerTest extends WebTestCase
 
         // Annuler
         $this->client->request('DELETE', "/api/exchanges/{$exchangeUuid}/cancel", [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ]);
 
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
@@ -279,7 +279,7 @@ class ExchangeControllerTest extends WebTestCase
         $token = $this->loginUser($this->user2);
 
         $this->client->request('GET', '/api/exchanges/received?limit=5', [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -293,7 +293,7 @@ class ExchangeControllerTest extends WebTestCase
         $token = $this->loginUser($this->user1);
 
         $this->client->request('GET', '/api/exchanges/sent?limit=5', [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -306,7 +306,7 @@ class ExchangeControllerTest extends WebTestCase
         $token = $this->loginUser($this->user1);
 
         $this->client->request('GET', '/api/exchanges/completed?limit=5', [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -321,7 +321,7 @@ class ExchangeControllerTest extends WebTestCase
         // Créer un échange
         $this->client->request('POST', '/api/exchanges', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ], json_encode([
             'bookOneId' => $this->book9->getId(),
             'bookTwoId' => $this->book10->getId(),
@@ -337,7 +337,7 @@ class ExchangeControllerTest extends WebTestCase
 
         // Afficher
         $this->client->request('GET', "/api/exchanges/{$exchangeUuid}", [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -353,7 +353,7 @@ class ExchangeControllerTest extends WebTestCase
         // Créer un échange
         $this->client->request('POST', '/api/exchanges', [], [], [
             'CONTENT_TYPE' => 'application/json',
-            'HTTP_Authorization' => 'Bearer '.$token1,
+            'HTTP_Authorization' => 'Bearer ' . $token1,
         ], json_encode([
             'bookOneId' => $this->book9->getId(),
             'bookTwoId' => $this->book10->getId(),
@@ -371,7 +371,7 @@ class ExchangeControllerTest extends WebTestCase
         $token2 = $this->loginUser($this->user2);
 
         $this->client->request('GET', "/api/exchanges/{$exchangeUuid}/available-books", [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token2,
+            'HTTP_Authorization' => 'Bearer ' . $token2,
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -384,7 +384,7 @@ class ExchangeControllerTest extends WebTestCase
         $token = $this->loginUser($this->user2);
 
         $this->client->request('GET', '/api/exchanges/received?status=pending&limit=5', [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -398,7 +398,7 @@ class ExchangeControllerTest extends WebTestCase
         $token = $this->loginUser($this->user2);
 
         $this->client->request('GET', '/api/exchanges/received?status=INVALID', [], [], [
-            'HTTP_Authorization' => 'Bearer '.$token,
+            'HTTP_Authorization' => 'Bearer ' . $token,
         ]);
 
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);

@@ -107,39 +107,140 @@ class Book
 //        $this->exchagedBook = new ArrayCollection();
     }
 
-    public function getId(): ?int { return $this->id; }
-    public function getUuid(): ?string { return $this->uuid; }
-    public function setUuid(string $uuid): self { $this->uuid = $uuid; return $this; }
-    public function getTitle(): ?string { return $this->title; }
-    public function setTitle(string $title): static { $this->title = $title; return $this; }
-    public function getAuthor(): ?string { return $this->author; }
-    public function setAuthor(string $author): static { $this->author = $author; return $this; }
-    public function getIsbn(): ?string { return $this->isbn; }
-    public function setIsbn(string $isbn): static { $this->isbn = $isbn; return $this; }
-    public function getDescription(): ?string { return $this->description; }
-    public function setDescription(string $description): static { $this->description = $description; return $this; }
-    public function getPages(): ?int { return $this->pages; }
-    public function setPages(int $pages): static { $this->pages = $pages; return $this; }
-    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
-    public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
-    public function setUpdatedAt(?\DateTimeImmutable $updatedAt): static { $this->updatedAt = $updatedAt; return $this; }
-    public function getUser(): ?User { return $this->user; }
-    public function setUser(?User $user): static { $this->user = $user; return $this; }
-    public function getEdition(): ?string { return $this->edition; }
-    public function setEdition(?string $edition): static { $this->edition = $edition; return $this; }
-    public function getLocation(): ?string { return $this->location; }
-    public function setLocation(string $location): static { $this->location = $location; return $this; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+    public function getUuid(): ?string
+    {
+        return $this->uuid;
+    }
+    public function setUuid(string $uuid): self
+    {
+        $this->uuid = $uuid;
+        return $this;
+    }
+    public function getTitle(): ?string
+    {
+        return $this->title;
+    }
+    public function setTitle(string $title): static
+    {
+        $this->title = $title;
+        return $this;
+    }
+    public function getAuthor(): ?string
+    {
+        return $this->author;
+    }
+    public function setAuthor(string $author): static
+    {
+        $this->author = $author;
+        return $this;
+    }
+    public function getIsbn(): ?string
+    {
+        return $this->isbn;
+    }
+    public function setIsbn(string $isbn): static
+    {
+        $this->isbn = $isbn;
+        return $this;
+    }
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+    public function setDescription(string $description): static
+    {
+        $this->description = $description;
+        return $this;
+    }
+    public function getPages(): ?int
+    {
+        return $this->pages;
+    }
+    public function setPages(int $pages): static
+    {
+        $this->pages = $pages;
+        return $this;
+    }
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+    public function setUpdatedAt(?\DateTimeImmutable $updatedAt): static
+    {
+        $this->updatedAt = $updatedAt;
+        return $this;
+    }
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+        return $this;
+    }
+    public function getEdition(): ?string
+    {
+        return $this->edition;
+    }
+    public function setEdition(?string $edition): static
+    {
+        $this->edition = $edition;
+        return $this;
+    }
+    public function getLocation(): ?string
+    {
+        return $this->location;
+    }
+    public function setLocation(string $location): static
+    {
+        $this->location = $location;
+        return $this;
+    }
 
     /** @return BookCategorieEnum[] */
-    public function getCategorie(): array { return $this->categorie; }
-    public function setCategorie(array $categorie): static { $this->categorie = $categorie; return $this; }
+    public function getCategorie(): array
+    {
+        return $this->categorie;
+    }
+    public function setCategorie(array $categorie): static
+    {
+        $this->categorie = $categorie;
+        return $this;
+    }
 
-    public function getState(): ?StateEnum { return $this->state; }
-    public function setState(StateEnum $state): static { $this->state = $state; return $this; }
+    public function getState(): ?StateEnum
+    {
+        return $this->state;
+    }
+    public function setState(StateEnum $state): static
+    {
+        $this->state = $state;
+        return $this;
+    }
 
-    public function getBookStatus(): ?BookStatusEnum { return $this->bookStatus; }
-    public function setBookStatus(BookStatusEnum $bookStatus): static { $this->bookStatus = $bookStatus; return $this; }
+    public function getBookStatus(): ?BookStatusEnum
+    {
+        return $this->bookStatus;
+    }
+    public function setBookStatus(BookStatusEnum $bookStatus): static
+    {
+        $this->bookStatus = $bookStatus;
+        return $this;
+    }
 
     /**
      * @return Collection<int, Exchange>
@@ -174,17 +275,17 @@ class Book
 /**
  * @return ExchangeTypeEnum[]
  */
-public function getAvailableExchangeTypes(): array
-{
-    return $this->availableExchangeTypes;
-}
+    public function getAvailableExchangeTypes(): array
+    {
+        return $this->availableExchangeTypes;
+    }
 
-public function setAvailableExchangeTypes(array $availableExchangeTypes): static
-{
-    $this->availableExchangeTypes = $availableExchangeTypes;
+    public function setAvailableExchangeTypes(array $availableExchangeTypes): static
+    {
+        $this->availableExchangeTypes = $availableExchangeTypes;
 
-    return $this;
-}
+        return $this;
+    }
 
     public function getImages(): Collection
     {

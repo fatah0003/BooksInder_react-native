@@ -51,4 +51,3 @@ class UpdateBookDTO
     ])]
     public ?array $availableExchangeTypes = null;
 }
-

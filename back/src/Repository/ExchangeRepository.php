@@ -262,5 +262,4 @@ class ExchangeRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
-
 }

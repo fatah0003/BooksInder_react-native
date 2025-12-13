@@ -18,7 +18,8 @@ class ChatService
         private readonly ExchangeRepository $exchangeRepository,
         private readonly NotificationService $notificationService,
         private readonly LoggerInterface $logger,
-    ) {}
+    ) {
+    }
 
     public function createConversationFromExchange(int $exchangeId): Conversation
     {

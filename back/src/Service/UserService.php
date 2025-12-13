@@ -21,7 +21,8 @@ class UserService
         private readonly ValidatorInterface $validator,
         private readonly UserRepository $userRepository,
         private readonly LoggerInterface $logger
-    ) {}
+    ) {
+    }
 
     public function createFromDTO(CreateUserDTO $dto): User
     {

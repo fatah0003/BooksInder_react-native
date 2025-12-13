@@ -104,4 +104,3 @@ class FavoriteRepository extends ServiceEntityRepository
             ->getResult();
     }
 }
-

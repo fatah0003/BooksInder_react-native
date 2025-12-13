@@ -63,12 +63,37 @@ class Notification
         $this->createdAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?int { return $this->id; }
-    public function getUser(): ?User { return $this->user; }
-    public function getType(): NotificationTypeEnum { return $this->type; }
-    public function getTitle(): string { return $this->title; }
-    public function getData(): ?array { return $this->data; }
-    public function isRead(): bool { return $this->isRead; }
-    public function setRead(bool $read): self { $this->isRead = $read; return $this; }
-    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+    public function getType(): NotificationTypeEnum
+    {
+        return $this->type;
+    }
+    public function getTitle(): string
+    {
+        return $this->title;
+    }
+    public function getData(): ?array
+    {
+        return $this->data;
+    }
+    public function isRead(): bool
+    {
+        return $this->isRead;
+    }
+    public function setRead(bool $read): self
+    {
+        $this->isRead = $read;
+        return $this;
+    }
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
 }

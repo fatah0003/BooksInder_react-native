@@ -12,7 +12,8 @@ class LoginRateLimitListener implements EventSubscriberInterface
 {
     public function __construct(
         private readonly RateLimiterFactory $loginLimiter
-    ) {}
+    ) {
+    }
 
     public static function getSubscribedEvents(): array
     {
@@ -48,5 +49,4 @@ class LoginRateLimitListener implements EventSubscriberInterface
             ], 429));
         }
     }
-
 }

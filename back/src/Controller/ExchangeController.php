@@ -25,12 +25,11 @@ use App\Exception\UnauthorizedActionException;
 class ExchangeController extends AbstractController
 {
     public function __construct(
-        private readonly ExchangeService     $exchangeService,
-        private readonly ExchangeRepository  $exchangeRepository,
+        private readonly ExchangeService $exchangeService,
+        private readonly ExchangeRepository $exchangeRepository,
         private readonly SerializerInterface $serializer,
-        private readonly ValidatorInterface  $validator
-    )
-    {
+        private readonly ValidatorInterface $validator
+    ) {
     }
 
     /**
@@ -223,6 +222,5 @@ class ExchangeController extends AbstractController
             'success' => true,
             'data' => $books
         ], 200, [], ['groups' => 'book:read']);
-
     }
 }

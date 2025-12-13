@@ -15,7 +15,8 @@ class ExceptionSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly KernelInterface $kernel
-    ) {}
+    ) {
+    }
 
     public static function getSubscribedEvents(): array
     {

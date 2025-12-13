@@ -21,7 +21,8 @@ class UserController extends AbstractController
         private readonly UserService $userService,
         private readonly SerializerInterface $serializer,
         private readonly UserRepository $userRepository
-    ) {}
+    ) {
+    }
 
     #[Route('', name: 'index', methods: ['GET'])]
     #[IsGranted('ROLE_ADMIN')]
