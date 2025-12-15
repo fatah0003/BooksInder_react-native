@@ -6,6 +6,7 @@ use App\Document\Conversation;
 use App\Document\Message;
 use App\Entity\User;
 use App\Service\ChatService;
+use App\Service\EmailService;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,6 +19,7 @@ class ChatController extends AbstractController
     public function __construct(
         private readonly ChatService $chatService,
         private readonly DocumentManager $dm,
+        private readonly EmailService $emailService
     ) {
     }
 
@@ -114,6 +116,19 @@ class ChatController extends AbstractController
 
         try {
             $message = $this->chatService->postMessage($id, $user->getUuid(), $content);
+
+            // Récupère le destinataire
+            $recipient = $this->chatService->getOtherParticipant($id, $user->getUuid());
+
+            // Envoi email uniquement si destinataire trouvé
+            if ($recipient !== null) {
+                $username = $user->getInfosUser()?->getUsername() ?? 'Utilisateur';
+                $this->emailService->sendNewMessageNotification(
+                    $recipient->getEmail(),
+                    $username
+                );
+            }
+
         } catch (\RuntimeException $e) {
             return $this->json(['success' => false, 'error' => $e->getMessage()], 400);
         }
@@ -129,4 +144,5 @@ class ChatController extends AbstractController
             ],
         ], 201);
     }
+
 }

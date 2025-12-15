@@ -7,9 +7,10 @@ use App\Document\Message;
 use App\Entity\Exchange;
 use App\Enum\ExchangeStatusEnum;
 use App\Repository\ExchangeRepository;
+use App\Repository\UserRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
-use App\Service\NotificationService;
+use App\Entity\User;
 
 class ChatService
 {
@@ -18,6 +19,7 @@ class ChatService
         private readonly ExchangeRepository $exchangeRepository,
         private readonly NotificationService $notificationService,
         private readonly LoggerInterface $logger,
+        private readonly UserRepository $userRepository
     ) {
     }
 
@@ -101,4 +103,31 @@ class ChatService
 
         return $message;
     }
+
+    /**
+     * Récupère l'autre participant d'une conversation
+     */
+    public function getOtherParticipant(string $conversationId, string $currentUserUuid): ?User
+    {
+        // Récupère la conversation
+        $conversation = $this->dm->getRepository(Conversation::class)->find($conversationId);
+
+        if (!$conversation) {
+            return null;
+        }
+
+        // Récupère les participants [uuid1, uuid2]
+        $participants = $conversation->getParticipants();
+
+        // Trouve l'UUID de l'autre participant
+        foreach ($participants as $participantUuid) {
+            if ($participantUuid !== $currentUserUuid) {
+                // Récupère l'entité User depuis PostgreSQL
+                return $this->userRepository->findOneBy(['uuid' => $participantUuid]);
+            }
+        }
+
+        return null;
+    }
+
 }

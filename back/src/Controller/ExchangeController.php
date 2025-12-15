@@ -4,10 +4,11 @@ namespace App\Controller;
 
 use App\DTO\Exchange\AcceptExchangeDTO;
 use App\DTO\Exchange\CreateExchangeDTO;
+use App\Entity\User;
 use App\Enum\ExchangeStatusEnum;
+use App\Service\EmailService;
 use App\Service\ExchangeService;
 use App\Repository\ExchangeRepository;
-use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,7 +29,8 @@ class ExchangeController extends AbstractController
         private readonly ExchangeService $exchangeService,
         private readonly ExchangeRepository $exchangeRepository,
         private readonly SerializerInterface $serializer,
-        private readonly ValidatorInterface $validator
+        private readonly ValidatorInterface $validator,
+        private readonly EmailService $emailService
     ) {
     }
 
@@ -59,12 +61,29 @@ class ExchangeController extends AbstractController
 
         $exchange = $this->exchangeService->createExchange($this->getUser(), $dto);
 
+        // Envoi email
+        /** @var User $userSenderMail */
+        $userSenderMail = $this->getUser();
+        $userReceiverMail = $exchange->getBookOne()?->getUser();
+
+        if ($userReceiverMail !== null) {
+            $bookTitle = $exchange->getBookOne()?->getTitle() ?? 'Titre inconnu';
+            $username  = $userSenderMail->getInfosUser()?->getUsername() ?? 'Utilisateur';
+
+            $this->emailService->sendExchangeRequestReceived(
+                $userReceiverMail->getEmail(),
+                $username,
+                $bookTitle
+            );
+        }
+
         return $this->json([
             'success' => true,
             'message' => 'Demande d\'échange créée avec succès',
             'data' => $exchange
         ], Response::HTTP_CREATED, [], ['groups' => 'exchange:read']);
     }
+
 
     #[Route('/{uuid}/accept', name: 'exchange_accept', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT'])]
     public function accept(string $uuid, Request $request): JsonResponse
@@ -96,12 +115,29 @@ class ExchangeController extends AbstractController
 
         $exchange = $this->exchangeService->acceptExchange($exchange, $this->getUser(), $dto);
 
+        // Envoi email
+        /** @var User $userSenderMail */
+        $userSenderMail = $this->getUser();
+        $userReceiverMail = $exchange->getBookTwo()?->getUser();
+
+        if ($userReceiverMail !== null) {
+            $bookTitle = $exchange->getBookTwo()?->getTitle() ?? 'Titre inconnu';
+            $username  = $userSenderMail->getInfosUser()?->getUsername() ?? 'Utilisateur';
+
+            $this->emailService->sendExchangeRequestAccepted(
+                $userReceiverMail->getEmail(),
+                $username,
+                $bookTitle
+            );
+        }
+
         return $this->json([
             'success' => true,
             'message' => 'Demande acceptée avec succès',
             'data' => $exchange
         ], 200, [], ['groups' => 'exchange:detail']);
     }
+
 
     #[Route('/{uuid}/reject', name: 'exchange_reject', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['PUT'])]
     public function reject(string $uuid): JsonResponse
