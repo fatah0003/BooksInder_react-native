@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Book } from '../types/Book';
 
 const API_URL = 'http://192.168.1.115:8000/api';
 
@@ -11,9 +12,11 @@ const apiClient = axios.create({
 });
 
 export const api = {
+  // Récupérer tous les livres
   getBooks: async () => {
     const response = await apiClient.get('/books');
-    return response.data;
+    // retourner juste le tableau de livres (dans "data")
+    return response.data.data;
   },
 };
 
