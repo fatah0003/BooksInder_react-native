@@ -27,13 +27,13 @@ class RegisterController extends AbstractController
     public function register(Request $request): JsonResponse
     {
         // Rate limiting
-        $limiter = $this->registerLimiter->create($request->getClientIp());
-        if (false === $limiter->consume(1)->isAccepted()) {
-            throw new TooManyRequestsHttpException(
-                null,
-                "Trop de tentatives d'inscription. Réessayez plus tard!"
-            );
-        }
+//        $limiter = $this->registerLimiter->create($request->getClientIp());
+//        if (false === $limiter->consume(1)->isAccepted()) {
+//            throw new TooManyRequestsHttpException(
+//                null,
+//                "Trop de tentatives d'inscription. Réessayez plus tard!"
+//            );
+//        }
 
         /** @var CreateUserDTO $dto */
         $dto = $this->serializer->deserialize(
