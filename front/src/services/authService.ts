@@ -3,44 +3,48 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoginCredentials, RegisterData, AuthResponse, User } from '../types/User';
 
 export const authService = {
+  // Récupérer l'utilisateur connecté depuis l'API
+  getCurrentUser: async (): Promise<User> => {
+    const response = await apiClient.get('/users/me');
+    return response.data;
+  },
+
   // Inscription
   register: async (data: RegisterData) => {
     const { confirmPassword, ...registerPayload } = data;
     
     const response = await apiClient.post('/register', registerPayload);
-    const { token, email, uuid, roles } = response.data;
+    const { token } = response.data;
     
-    // ⬇️ AJOUT : Sauvegarder les données utilisateur
     await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('user', JSON.stringify({ email, uuid, roles }));
-    
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     
-    return response.data;
+    // Récupérer les infos complètes de l'utilisateur
+    const user = await authService.getCurrentUser();
+    await AsyncStorage.setItem('user', JSON.stringify(user));
+    
+    return { token, user };
   },
 
   // Connexion
-login: async (credentials: LoginCredentials) => {
-  const response = await apiClient.post('/login', credentials);
-  const { token } = response.data;
-  
-  const email = response.data.email || credentials.email;
-  const uuid = response.data.uuid || '';
-  const roles = response.data.roles || ['ROLE_USER'];
-  
-  await AsyncStorage.setItem('token', token);
-  await AsyncStorage.setItem('user', JSON.stringify({ email, uuid, roles }));
-  
-  apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  
-  return token;
-},
-
+  login: async (credentials: LoginCredentials) => {
+    const response = await apiClient.post('/login', credentials);
+    const { token } = response.data;
+    
+    await AsyncStorage.setItem('token', token);
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Récupérer les infos complètes de l'utilisateur
+    const user = await authService.getCurrentUser();
+    await AsyncStorage.setItem('user', JSON.stringify(user));
+    
+    return { token, user };
+  },
 
   // Déconnexion
   logout: async () => {
     await AsyncStorage.removeItem('token');
-    await AsyncStorage.removeItem('user'); // ⬅️ AJOUT
+    await AsyncStorage.removeItem('user');
     delete apiClient.defaults.headers.common['Authorization'];
   },
 
@@ -49,7 +53,7 @@ login: async (credentials: LoginCredentials) => {
     return await AsyncStorage.getItem('token');
   },
 
-  // ⬇️ MODIFIÉ : Restaurer la session avec les données utilisateur
+  // Restaurer la session au démarrage
   restoreSession: async (): Promise<User | null> => {
     const token = await AsyncStorage.getItem('token');
     const userJson = await AsyncStorage.getItem('user');
@@ -58,7 +62,6 @@ login: async (credentials: LoginCredentials) => {
       const userData = JSON.parse(userJson);
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
-      // Retourner l'objet User complet
       return {
         ...userData,
         token,

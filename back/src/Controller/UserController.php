@@ -32,6 +32,16 @@ class UserController extends AbstractController
 
         return $this->json($users, 200, [], ['groups' => 'user:read']);
     }
+    // recupération des données user conncté
+    #[Route('/me', name: 'me', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function me(): JsonResponse
+    {
+        $user = $this->getUser();
+
+        return $this->json($user, 200, [], ['groups' => 'user:read']);
+    }
+
 
     #[Route('/{uuid}', name: 'show', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
     public function show(string $uuid): JsonResponse

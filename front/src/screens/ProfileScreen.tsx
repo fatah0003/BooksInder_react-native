@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button, Alert } from 'react-native';
+import { View, Text, StyleSheet, Button, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -23,17 +23,84 @@ const ProfileScreen = () => {
     );
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR');
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>Mon Profil</Text>
       
       {user && (
         <>
+          {/* Email (toujours présent) */}
           <View style={styles.infoContainer}>
-            <Text style={styles.label}>Email :</Text>
+            <Text style={styles.label}>Email</Text>
             <Text style={styles.value}>{user.email}</Text>
           </View>
 
+          {/* Si infosUser existe, afficher les infos */}
+          {user.infosUser ? (
+            <>
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Nom d'utilisateur</Text>
+                <Text style={styles.value}>{user.infosUser.userName}</Text>
+              </View>
+
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Téléphone</Text>
+                <Text style={styles.value}>{user.infosUser.phoneNumber}</Text>
+              </View>
+
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Ville</Text>
+                <Text style={styles.value}>{user.infosUser.city}</Text>
+              </View>
+
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>Date de naissance</Text>
+                <Text style={styles.value}>{formatDate(user.infosUser.birthDate)}</Text>
+              </View>
+
+              {user.infosUser.bio && (
+                <View style={styles.infoContainer}>
+                  <Text style={styles.label}>Biographie</Text>
+                  <Text style={styles.value}>{user.infosUser.bio}</Text>
+                </View>
+              )}
+
+              {/* Bouton Modifier */}
+              <View style={styles.buttonContainer}>
+                <Button 
+                  title="Modifier mon profil" 
+                  onPress={() => navigation.navigate('EditProfile')}
+                  color="#007AFF"
+                />
+              </View>
+            </>
+          ) : (
+            /* Si pas d'infosUser, afficher le message et bouton */
+            <>
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  Votre profil est incomplet
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  Complétez vos informations pour profiter pleinement de Booksinder
+                </Text>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.completeButton}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Text style={styles.completeButtonText}>Compléter mon profil</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Bouton Déconnexion (toujours présent) */}
           <View style={styles.buttonContainer}>
             <Button 
               title="Se déconnecter" 
@@ -43,7 +110,7 @@ const ProfileScreen = () => {
           </View>
         </>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
@@ -64,7 +131,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
-    marginBottom: 20,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -75,14 +142,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 5,
+    fontWeight: '600',
   },
   value: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
     color: '#333',
   },
+  emptyContainer: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 10,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  completeButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  completeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   buttonContainer: {
-    marginTop: 20,
+    marginTop: 10,
+    marginBottom: 10,
   },
 });
 

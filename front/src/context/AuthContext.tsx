@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/authService';
 import { User } from '../types/User';
 
@@ -7,6 +8,7 @@ interface AuthContextData {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -16,40 +18,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restaurer la session au démarrage
     loadStoredData();
   }, []);
 
   async function loadStoredData() {
-  try {
-    const restoredUser = await authService.restoreSession();
-    if (restoredUser) {
-      setUser(restoredUser);
+    try {
+      const restoredUser = await authService.restoreSession();
+      if (restoredUser) {
+        setUser(restoredUser);
+      }
+    } catch (error) {
+      console.log('Pas de session');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.log('Pas de session');
-  } finally {
-    setLoading(false);
   }
-}
-
-
 
   async function login(email: string, password: string) {
     const response = await authService.login({ email, password });
-    
-    // ⬇️ CHANGÉ : On récupère les données complètes depuis la réponse
-    const token = typeof response === 'string' ? response : response.token;
-    const userEmail = typeof response === 'string' ? email : response.email;
-    const uuid = typeof response === 'string' ? '' : response.uuid;
-    const roles = typeof response === 'string' ? ['ROLE_USER'] : response.roles;
-    
-    setUser({ 
-      email: userEmail, 
-      token,
-      uuid,
-      roles
-    } as User);
+    setUser(response.user);
   }
 
   async function logout() {
@@ -57,8 +44,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   }
 
+  async function refreshUser() {
+    try {
+      const updatedUser = await authService.getCurrentUser();
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } catch (error) {
+      console.log('Erreur refresh user:', error);
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

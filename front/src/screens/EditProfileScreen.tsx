@@ -1,0 +1,285 @@
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity,
+  Alert,
+  Platform
+} from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { infosUserService } from '../services/infosUserService';
+
+export default function EditProfileScreen({ navigation }: any) {
+  const { user, refreshUser } = useAuth();
+  
+  // Préremplir avec les données existantes si elles existent
+  const [userName, setUserName] = useState(user?.infosUser?.userName || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.infosUser?.phoneNumber || '');
+  const [city, setCity] = useState(user?.infosUser?.city || '');
+  const [birthDate, setBirthDate] = useState(
+    user?.infosUser?.birthDate ? user.infosUser.birthDate.split('T')[0] : ''
+  );
+  const [bio, setBio] = useState(user?.infosUser?.bio || '');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    // UserName
+    if (!userName.trim()) {
+      newErrors.userName = 'Le nom d\'utilisateur est requis';
+    } else if (userName.length < 2 || userName.length > 30) {
+      newErrors.userName = 'Entre 2 et 30 caractères';
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(userName)) {
+      newErrors.userName = 'Lettres, chiffres, tirets et underscores uniquement';
+    }
+
+    // Phone
+    if (!phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Le téléphone est requis';
+    } else if (!/^(\+33|0)[1-9](\d{8})$/.test(phoneNumber)) {
+      newErrors.phoneNumber = 'Numéro français invalide (ex: 0612345678)';
+    }
+
+    // City
+    if (!city.trim()) {
+      newErrors.city = 'La ville est requise';
+    } else if (city.length < 2 || city.length > 50) {
+      newErrors.city = 'Entre 2 et 50 caractères';
+    }
+
+    // BirthDate
+    if (!birthDate.trim()) {
+      newErrors.birthDate = 'La date de naissance est requise';
+    } else {
+      const date = new Date(birthDate);
+      const now = new Date();
+      const age = now.getFullYear() - date.getFullYear();
+      if (age < 13 || age > 120) {
+        newErrors.birthDate = 'Âge invalide';
+      }
+    }
+
+    // Bio (optionnel)
+    if (bio && bio.length > 1000) {
+      newErrors.bio = 'Maximum 1000 caractères';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+const handleSubmit = async () => {
+  if (!validateForm()) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const data = {
+      userName: userName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      city: city.trim(),
+      birthDate,
+      bio: bio.trim() || undefined,
+    };
+
+    if (user?.infosUser?.id) {
+      await infosUserService.update(user.infosUser.id, data);
+      Alert.alert('Succès', 'Profil modifié avec succès !');
+    } else {
+      await infosUserService.create(data);
+      Alert.alert('Succès', 'Profil complété avec succès !');
+    }
+
+    // ⬇️ AJOUT : Attendre 500ms pour que la BDD se mette à jour
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    await refreshUser();
+    
+    navigation.goBack();
+  } catch (error: any) {
+    Alert.alert(
+      'Erreur',
+      error.response?.data?.message || 'Une erreur est survenue'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>
+        {user?.infosUser ? 'Modifier mon profil' : 'Compléter mon profil'}
+      </Text>
+
+      {/* UserName */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Nom d'utilisateur *</Text>
+        <TextInput
+          style={[styles.input, errors.userName && styles.inputError]}
+          placeholder="ex: john_doe"
+          value={userName}
+          onChangeText={setUserName}
+          autoCapitalize="none"
+        />
+        {errors.userName && <Text style={styles.errorText}>{errors.userName}</Text>}
+      </View>
+
+      {/* Phone */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Téléphone *</Text>
+        <TextInput
+          style={[styles.input, errors.phoneNumber && styles.inputError]}
+          placeholder="ex: 0612345678"
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+          keyboardType="phone-pad"
+        />
+        {errors.phoneNumber && <Text style={styles.errorText}>{errors.phoneNumber}</Text>}
+      </View>
+
+      {/* City */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Ville *</Text>
+        <TextInput
+          style={[styles.input, errors.city && styles.inputError]}
+          placeholder="ex: Paris"
+          value={city}
+          onChangeText={setCity}
+        />
+        {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+      </View>
+
+      {/* BirthDate */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Date de naissance * (AAAA-MM-JJ)</Text>
+        <TextInput
+          style={[styles.input, errors.birthDate && styles.inputError]}
+          placeholder="ex: 1990-01-15"
+          value={birthDate}
+          onChangeText={setBirthDate}
+        />
+        {errors.birthDate && <Text style={styles.errorText}>{errors.birthDate}</Text>}
+      </View>
+
+      {/* Bio */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Biographie (optionnel)</Text>
+        <TextInput
+          style={[styles.input, styles.textArea, errors.bio && styles.inputError]}
+          placeholder="Parlez de vous..."
+          value={bio}
+          onChangeText={setBio}
+          multiline
+          numberOfLines={4}
+          maxLength={1000}
+        />
+        <Text style={styles.charCount}>{bio.length}/1000</Text>
+        {errors.bio && <Text style={styles.errorText}>{errors.bio}</Text>}
+      </View>
+
+      {/* Boutons */}
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleSubmit}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? 'Enregistrement...' : 'Enregistrer'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.cancelButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.cancelButtonText}>Annuler</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 30,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 16,
+  },
+  inputError: {
+    borderColor: '#d9534f',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  errorText: {
+    color: '#d9534f',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  charCount: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+    marginTop: 5,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cancelButton: {
+    padding: 15,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+  },
+});
