@@ -1,34 +1,29 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-
 import BookListScreen from '../screens/BookListScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import AuthStack from './AuthStack';
+import { useAuth } from '../context/AuthContext';
 
 const Tab = createBottomTabNavigator();
 
-export default function MainTabs() {
-    return (
-        <Tab.Navigator
-            screenOptions={{
-                headerShown: false,
-                tabBarActiveTintColor: '#007AFF',
-            }}
-        >
-            <Tab.Screen
-                name="Livres"
-                component={BookListScreen}
-                options={{
-                    tabBarLabel: 'Livres',
-                }}
-            />
-            <Tab.Screen
-                name="Profil"
-                component={AuthStack}
-                options={{
-                    tabBarLabel: 'Profil',
-                }}
-            />
+const MainTabs = () => {
+  const { user } = useAuth();
 
-        </Tab.Navigator>
-    );
-}
+  return (
+    <Tab.Navigator>
+      <Tab.Screen 
+        name="Livres" 
+        component={BookListScreen}
+        options={{ headerShown: false }}
+      />
+      <Tab.Screen 
+        name="Profil" 
+        component={user ? ProfileScreen : AuthStack}
+        options={{ headerShown: false }}
+      />
+    </Tab.Navigator>
+  );
+};
+
+export default MainTabs;

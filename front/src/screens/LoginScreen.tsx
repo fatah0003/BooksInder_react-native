@@ -1,37 +1,28 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { authService } from '../services/authService';
-import { LoginCredentials } from '../types/User';
+import { useAuth } from '../context/AuthContext'; // ⬅️ AJOUT
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(''); // ⬅️ AJOUT
+  const { login } = useAuth(); // ⬅️ AJOUT
 
   const handleLogin = async () => {
-    // Validation simple
     if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      setError('Veuillez remplir tous les champs');
       return;
     }
 
-    setLoading(true);
     try {
-      const credentials: LoginCredentials = { email, password };
-      const token = await authService.login(credentials);
-
-      // Connexion réussie
+      setLoading(true);
+      setError('');
+      await login(email, password);
       Alert.alert('Succès', 'Connexion réussie !');
-      console.log('Token reçu:', token);
-
-      // TODO: Naviguer vers l'écran principal
-
-    } catch (error: any) {
-      console.error('Erreur login:', error);
-      Alert.alert(
-        'Erreur de connexion',
-        error.response?.data?.message || 'Email ou mot de passe incorrect'
-      );
+      navigation.navigate('Profil');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -41,6 +32,8 @@ export default function LoginScreen({ navigation }: any) {
     <View style={styles.container}>
       <Text style={styles.title}>Booksinder</Text>
       <Text style={styles.subtitle}>Connexion</Text>
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <TextInput
         style={styles.input}
@@ -72,7 +65,6 @@ export default function LoginScreen({ navigation }: any) {
       <TouchableOpacity onPress={() => navigation.navigate('Register')}>
         <Text style={styles.link}>Pas encore de compte ?</Text>
       </TouchableOpacity>
-
     </View>
   );
 }
@@ -117,12 +109,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  linkButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  linkText: {
+  link: { // ⬅️ CORRIGÉ (était linkText)
     color: '#007AFF',
     fontSize: 14,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  error: { // ⬅️ AJOUT
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
   },
 });

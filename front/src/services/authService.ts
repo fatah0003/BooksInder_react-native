@@ -5,30 +5,42 @@ import { LoginCredentials, RegisterData, AuthResponse, User } from '../types/Use
 export const authService = {
   // Inscription
   register: async (data: RegisterData) => {
-    // On n'envoie pas confirmPassword à l'API (juste pour validation front)
     const { confirmPassword, ...registerPayload } = data;
     
     const response = await apiClient.post('/register', registerPayload);
-    return response.data;  // Retourne l'user créé
+    const { token, email, uuid, roles } = response.data;
+    
+    // ⬇️ AJOUT : Sauvegarder les données utilisateur
+    await AsyncStorage.setItem('token', token);
+    await AsyncStorage.setItem('user', JSON.stringify({ email, uuid, roles }));
+    
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    return response.data;
   },
 
   // Connexion
-  login: async (credentials: LoginCredentials) => {
-    const response = await apiClient.post('/login', credentials);
-    const { token } = response.data;
-    
-    // Sauvegarder le token sur le téléphone
-    await AsyncStorage.setItem('token', token);
-    
-    // Configurer axios pour les prochaines requêtes
-    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
-    return token;
-  },
+login: async (credentials: LoginCredentials) => {
+  const response = await apiClient.post('/login', credentials);
+  const { token } = response.data;
+  
+  const email = response.data.email || credentials.email;
+  const uuid = response.data.uuid || '';
+  const roles = response.data.roles || ['ROLE_USER'];
+  
+  await AsyncStorage.setItem('token', token);
+  await AsyncStorage.setItem('user', JSON.stringify({ email, uuid, roles }));
+  
+  apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  
+  return token;
+},
+
 
   // Déconnexion
   logout: async () => {
     await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user'); // ⬅️ AJOUT
     delete apiClient.defaults.headers.common['Authorization'];
   },
 
@@ -37,13 +49,22 @@ export const authService = {
     return await AsyncStorage.getItem('token');
   },
 
-  // Restaurer la session au démarrage
-  restoreSession: async () => {
+  // ⬇️ MODIFIÉ : Restaurer la session avec les données utilisateur
+  restoreSession: async (): Promise<User | null> => {
     const token = await AsyncStorage.getItem('token');
-    if (token) {
+    const userJson = await AsyncStorage.getItem('user');
+    
+    if (token && userJson) {
+      const userData = JSON.parse(userJson);
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      return true;
+      
+      // Retourner l'objet User complet
+      return {
+        ...userData,
+        token,
+      };
     }
-    return false;
+    
+    return null;
   },
 };

@@ -21,25 +21,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   async function loadStoredData() {
-    try {
-      const token = await authService.restoreSession();
-      if (token) {
-        // TODO: Appeler GET /api/user/me pour récupérer les infos utilisateur
-        // Pour l'instant, on considère juste qu'il est connecté
-        setUser({ email: 'user', token } as User);
-      }
-    } catch (error) {
-      console.log('Pas de session');
-    } finally {
-      setLoading(false);
+  try {
+    const restoredUser = await authService.restoreSession();
+    if (restoredUser) {
+      setUser(restoredUser);
     }
+  } catch (error) {
+    console.log('Pas de session');
+  } finally {
+    setLoading(false);
   }
+}
+
+
 
   async function login(email: string, password: string) {
-    const token = await authService.login({ email, password });
-    setUser({ email, token } as User);
+    const response = await authService.login({ email, password });
+    
+    // ⬇️ CHANGÉ : On récupère les données complètes depuis la réponse
+    const token = typeof response === 'string' ? response : response.token;
+    const userEmail = typeof response === 'string' ? email : response.email;
+    const uuid = typeof response === 'string' ? '' : response.uuid;
+    const roles = typeof response === 'string' ? ['ROLE_USER'] : response.roles;
+    
+    setUser({ 
+      email: userEmail, 
+      token,
+      uuid,
+      roles
+    } as User);
   }
-
 
   async function logout() {
     await authService.logout();
