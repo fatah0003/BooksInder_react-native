@@ -23,7 +23,7 @@ class Book
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 36, unique: true)]
-    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail', 'book:read:detail'])]
     private ?string $uuid = null;
 
 

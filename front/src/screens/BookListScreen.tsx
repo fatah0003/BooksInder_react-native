@@ -1,92 +1,142 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { api } from '../services/api';
 import { Book } from '../types/Book';
 import { useAuth } from '../context/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 export default function BookListScreen() {
-  // États pour stocker les données
-  const [books, setBooks] = useState<Book[]>([]);  // Liste des livres
-  const [loading, setLoading] = useState(true);     // Indicateur de chargement
-  const [error, setError] = useState<string | null>(null);  // Message d'erreur
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(true);
 
   const { user } = useAuth();
   const navigation = useNavigation();
 
-  // useEffect : se lance au chargement de l'écran
-  useEffect(() => {
-    loadBooks();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      setBooks([]);
+      setCurrentPage(1);
+      setHasNextPage(true);
+      loadBooks(1, true);
+    }, [])
+  );
 
-  // Fonction pour charger les livres depuis l'API
-  const loadBooks = async () => {
+  const loadBooks = async (page: number = 1, refresh: boolean = false) => {
+    if (refresh) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
-      const data = await api.getBooks();
-      setBooks(data);  // On met les livres dans l'état
+      const response = await api.getBooks(page, 10);
+      
+      if (refresh) {
+        setBooks(response.data);
+      } else {
+        setBooks((prevBooks) => [...prevBooks, ...response.data]);
+      }
+      
+      setHasNextPage(response.pagination.hasNextPage);
+      setError(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);  // Chargement terminé
+      setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  // clic sur un livre pour voir les détail
+  const handleLoadMore = () => {
+    if (!loadingMore && hasNextPage) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadBooks(nextPage, false);
+    }
+  };
+
   const handleBookPress = (book: Book) => {
     if (user) {
-      // Utilisateur connecté → Navigation vers détails
       navigation.navigate('BookDetail' as never, { bookUuid: book.uuid } as never);
     } else {
-      // Utilisateur non connecté → Message + Redirection vers connexion
       Alert.alert(
         'Connexion requise',
         'Vous devez être connecté pour consulter les détails d\'un livre.',
         [
           { text: 'Annuler', style: 'cancel' },
-          {
-            text: 'Se connecter',
-            onPress: () => navigation.navigate('Profil' as never) // Va vers l'onglet Profil = AuthStack
+          { 
+            text: 'Se connecter', 
+            onPress: () => navigation.navigate('Profil' as never)
           }
         ]
       );
     }
   };
 
-  // Affichage pendant le chargement
+  const handleAddBook = () => {
+    if (user) {
+      navigation.navigate('AddBook' as never);
+    } else {
+      Alert.alert(
+        'Connexion requise',
+        'Vous devez être connecté pour ajouter un livre.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Se connecter', 
+            onPress: () => navigation.navigate('Profil' as never)
+          }
+        ]
+      );
+    }
+  };
+
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text>Chargement des livres...</Text>
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Chargement des livres...</Text>
       </View>
     );
   }
 
-  // Affichage en cas d'erreur
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Erreur : {error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => {
+            setBooks([]);
+            setCurrentPage(1);
+            setHasNextPage(true);
+            loadBooks(1, true);
+          }}
+        >
+          <Text style={styles.retryButtonText}>Réessayer</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  // Affichage de la liste
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Catalogue Booksinder ({books.length} livres)</Text>
+      <Text style={styles.title}>Catalogue Booksinder</Text>
 
       <FlatList
         data={books}
         keyExtractor={(item) => item.uuid}
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.bookCard}
             onPress={() => handleBookPress(item)}
           >
             {(() => {
-              // Chercher l'image de type "front" en priorité
               const frontImage = item.images.find(img => img.type === 'front');
-              // Si pas de front, prendre la première image
               const imageToShow = frontImage || item.images[0];
 
               return imageToShow ? (
@@ -101,8 +151,35 @@ export default function BookListScreen() {
             <Text style={styles.bookLocation}>📍 {item.location}</Text>
           </TouchableOpacity>
         )}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={() => {
+          if (loadingMore) {
+            return (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.footerText}>Chargement...</Text>
+              </View>
+            );
+          }
+          
+          if (!hasNextPage && books.length > 0) {
+            return (
+              <View style={styles.endMessage}>
+                <Text style={styles.endMessageText}>🎉 Vous avez tout vu !</Text>
+              </View>
+            );
+          }
+          
+          return null;
+        }}
       />
 
+      {user && (
+        <TouchableOpacity style={styles.floatingButton} onPress={handleAddBook}>
+          <Text style={styles.floatingButtonText}>+</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -113,6 +190,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 20,
     paddingTop: 50,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
   title: {
     fontSize: 24,
@@ -142,11 +225,70 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   bookImage: {
     width: '100%',
     height: 200,
     borderRadius: 8,
     marginBottom: 10,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  floatingButtonText: {
+    fontSize: 36,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  footerLoader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  footerText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  endMessage: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  endMessageText: {
+    fontSize: 16,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

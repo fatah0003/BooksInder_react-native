@@ -7,6 +7,14 @@ export interface BookImage {
   createdAt: string;
 }
 
+// Structure du propriétaire du livre
+export interface BookOwner {
+  uuid: string;
+  infosUser?: {
+    userName: string;
+  };
+}
+
 // Structure d'un livre
 export interface Book {
   uuid: string;
@@ -24,4 +32,5 @@ export interface Book {
   bookStatus: string;
   availableExchangeTypes: string[];
   images: BookImage[];
+  user?: BookOwner;
 }

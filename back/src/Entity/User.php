@@ -26,7 +26,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 36, unique: true)]
-    #[Groups(['user:read', 'book:read', 'exchange:read'])]
+    #[Groups(['user:read', 'book:read', 'exchange:read', 'user:public'])]
     private ?string $uuid = null;
 
     #[ORM\Column(length: 180)]
@@ -66,7 +66,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist', 'remove'])]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'user:public', 'book:read:detail'])]
     private ?InfosUser $infosUser = null;
 
     #[ORM\OneToMany(targetEntity: Book::class, mappedBy: 'user', cascade: ['persist', 'remove'])]

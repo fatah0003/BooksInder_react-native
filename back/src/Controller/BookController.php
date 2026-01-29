@@ -54,7 +54,7 @@ class BookController extends AbstractController
         return $this->json([
             'success' => true,
             'data' => $book
-        ], 200, [], ['groups' => 'book:read']);
+        ], 200, [], ['groups' => ['book:read', 'book:read:detail']]);
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
@@ -218,4 +218,21 @@ class BookController extends AbstractController
             'message' => 'Image de couverture arrière mise à jour',
         ], Response::HTTP_OK);
     }
+
+    #[Route('/my-books', name: 'my_books', methods: ['GET'])]
+    public function myBooks(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('User must be logged in.');
+        }
+
+        $books = $this->bookRepository->findBy(['user' => $user], ['createdAt' => 'DESC']);
+
+        return $this->json([
+            'success' => true,
+            'data' => $books
+        ], 200, [], ['groups' => 'book:read']);
+    }
+
 }

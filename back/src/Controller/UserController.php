@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\DTO\User\UpdateUserDTO;
 use App\Exception\ResourceNotFoundException;
 use App\Exception\UnauthorizedActionException;
+use App\Repository\BookRepository;
 use App\Repository\UserRepository;
 use App\Service\UserService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,7 +21,8 @@ class UserController extends AbstractController
     public function __construct(
         private readonly UserService $userService,
         private readonly SerializerInterface $serializer,
-        private readonly UserRepository $userRepository
+        private readonly UserRepository $userRepository,
+        private readonly BookRepository $bookRepository
     ) {
     }
 
@@ -109,4 +111,27 @@ class UserController extends AbstractController
             'message' => 'Utilisateur supprimé'
         ]);
     }
+
+    // Méthode pour afficher les infos public d'un prifil
+    #[Route('/{uuid}/public-profile', name: 'public_profile', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]
+    public function publicProfile(string $uuid): JsonResponse
+    {
+        $user = $this->userRepository->findOneBy(['uuid' => $uuid]);
+
+        if (!$user) {
+            throw new ResourceNotFoundException('Utilisateur', $uuid);
+        }
+
+        // Récupérer tous les livres de cet utilisateur
+        $books = $this->bookRepository->findBy(['user' => $user], ['createdAt' => 'DESC']);
+
+        return $this->json([
+            'success' => true,
+            'data' => [
+                'user' => $user,
+                'books' => $books
+            ]
+        ], 200, [], ['groups' => ['user:public', 'book:read']]);
+    }
+
 }

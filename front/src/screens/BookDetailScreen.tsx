@@ -1,14 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { Book } from '../types/Book';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { bookService } from '../services/bookService';
 
 type BookDetailRouteProp = RouteProp<{ BookDetail: { bookUuid: string } }, 'BookDetail'>;
 
 export default function BookDetailScreen() {
   const route = useRoute<BookDetailRouteProp>();
+  const navigation = useNavigation();
   const { bookUuid } = route.params;
+  const { user } = useAuth();
 
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
@@ -21,12 +34,60 @@ export default function BookDetailScreen() {
   const loadBookDetail = async () => {
     try {
       const data = await api.getBookDetail(bookUuid);
+      console.log('📚 Données reçues du backend:', JSON.stringify(data, null, 2));
       setBook(data);
     } catch (err: any) {
+      console.error('❌ Erreur:', err.message);
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const isOwner = user && book?.user && user.uuid === book.user.uuid;
+
+  // ← NOUVELLE FONCTION : Gérer le clic sur le propriétaire
+  const handleOwnerPress = () => {
+    if (!book?.user) return;
+
+    if (user?.uuid === book.user.uuid) {
+      // C'est mon livre → Aller vers l'onglet Profil
+      navigation.navigate('Profil' as never);
+    } else {
+      // C'est quelqu'un d'autre → Profil public
+      navigation.navigate('UserPublicProfile' as never, { userUuid: book.user.uuid } as never);
+    }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Supprimer ce livre',
+      'Êtes-vous sûr de vouloir supprimer ce livre ? Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await bookService.delete(bookUuid);
+              Alert.alert('Succès', 'Le livre a été supprimé', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } catch (error: any) {
+              Alert.alert('Erreur', error.response?.data?.message || 'Impossible de supprimer le livre');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    navigation.navigate('EditBook' as never, { bookUuid, book } as never);
   };
 
   if (loading) {
@@ -46,16 +107,16 @@ export default function BookDetailScreen() {
     );
   }
 
-  // Trouver l'image front et back
-  const frontImage = book.images.find(img => img.type === 'front');
-  const backImage = book.images.find(img => img.type === 'back');
+  const frontImage = book.images.find((img) => img.type === 'front');
+  const backImage = book.images.find((img) => img.type === 'back');
 
-  // Traduire l'état du livre
   const stateLabels: Record<string, string> = {
-    'new': 'Neuf',
-    'like_new': 'Comme neuf',
-    'good': 'Bon état',
-    'acceptable': 'État acceptable'
+    new: 'Neuf',
+    like_new: 'Comme neuf',
+    very_good: 'Très bon état',
+    good: 'Bon état',
+    acceptable: 'État acceptable',
+    well_loved: 'Bien vécu',
   };
 
   return (
@@ -80,7 +141,21 @@ export default function BookDetailScreen() {
       <View style={styles.infoContainer}>
         <Text style={styles.title}>{book.title}</Text>
         <Text style={styles.author}>par {book.author}</Text>
-        
+
+        {/* Propriétaire cliquable */}
+        {book.user && (
+          <TouchableOpacity style={styles.ownerContainer} onPress={handleOwnerPress}>
+            <Text style={styles.ownerLabel}>Proposé par : </Text>
+            <Text style={styles.ownerName}>
+              {isOwner
+                ? 'Vous'
+                : `@${book.user.infosUser?.userName || 'Utilisateur'}`
+              }
+            </Text>
+          </TouchableOpacity>
+        )}
+
+
         <View style={styles.separator} />
 
         <Text style={styles.sectionTitle}>Description</Text>
@@ -141,6 +216,21 @@ export default function BookDetailScreen() {
             </View>
           </>
         )}
+
+        {/* Boutons Modifier / Supprimer (si propriétaire) */}
+        {isOwner && (
+          <>
+            <View style={styles.separator} />
+            <View style={styles.ownerActions}>
+              <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                <Text style={styles.editButtonText}>✏️ Modifier</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+                <Text style={styles.deleteButtonText}>🗑️ Supprimer</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -176,7 +266,25 @@ const styles = StyleSheet.create({
   author: {
     fontSize: 18,
     color: '#666',
-    marginBottom: 15,
+    marginBottom: 10,
+  },
+  // styles pour le propriétaire
+  ownerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f8ff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  ownerLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  ownerName: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   separator: {
     height: 1,
@@ -242,5 +350,34 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 16,
     textAlign: 'center',
+  },
+  ownerActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#FF3B30',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

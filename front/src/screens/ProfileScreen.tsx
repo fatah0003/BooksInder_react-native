@@ -1,10 +1,34 @@
-import React from 'react';
-import { View, Text, StyleSheet, Button, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Button, Alert, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
+import { useFocusEffect } from '@react-navigation/native';
+import { api } from '../services/api';
+import { Book } from '../types/Book';
 
 const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
+  const [myBooks, setMyBooks] = useState<Book[]>([]);
+  const [loadingBooks, setLoadingBooks] = useState(true);
+
+  // Charger mes livres à chaque fois que l'écran est affiché
+  useFocusEffect(
+    React.useCallback(() => {
+      loadMyBooks();
+    }, [])
+  );
+
+  const loadMyBooks = async () => {
+    try {
+      setLoadingBooks(true);
+      const books = await api.getMyBooks();
+      setMyBooks(books);
+    } catch (error) {
+      console.error('Erreur lors du chargement des livres:', error);
+    } finally {
+      setLoadingBooks(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -31,7 +55,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      '⚠️ Supprimer le compte',
+      'Supprimer le compte',
       'Cette action est irréversible. Toutes vos données seront définitivement supprimées.\n\nÊtes-vous sûr de vouloir continuer ?',
       [
         {
@@ -59,6 +83,14 @@ const ProfileScreen = ({ navigation }: any) => {
       ]
     );
   };
+
+  const handleBookPress = (bookUuid: string) => {
+  // naviguer vers la Stack Books, puis vers BookDetail
+  navigation.getParent()?.navigate('Livres', {
+    screen: 'BookDetail',
+    params: { bookUuid }
+  });
+};
 
 
   return (
@@ -133,6 +165,51 @@ const ProfileScreen = ({ navigation }: any) => {
             </>
           )}
 
+          {/* Section Mes livres */}
+          <View style={styles.booksSection}>
+            <Text style={styles.sectionTitle}>Mes livres ({myBooks.length})</Text>
+
+            {loadingBooks ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.loadingText}>Chargement...</Text>
+              </View>
+            ) : myBooks.length === 0 ? (
+              <View style={styles.emptyBooksContainer}>
+                <Text style={styles.noBooksText}>Vous n'avez pas encore ajouté de livres</Text>
+              </View>
+            ) : (
+              myBooks.map((book) => {
+                const frontImage = book.images.find((img) => img.type === 'front');
+                const imageToShow = frontImage || book.images[0];
+
+                return (
+                  <TouchableOpacity
+                    key={book.uuid}
+                    style={styles.bookCard}
+                    onPress={() => handleBookPress(book.uuid)}
+                  >
+                    {imageToShow ? (
+                      <Image
+                        source={{ uri: `http://192.168.1.115:8000${imageToShow.imageUrl}` }}
+                        style={styles.bookImage}
+                      />
+                    ) : (
+                      <View style={styles.noImagePlaceholder}>
+                        <Text style={styles.noImageText}>📚</Text>
+                      </View>
+                    )}
+                    <View style={styles.bookInfo}>
+                      <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
+                      <Text style={styles.bookAuthor} numberOfLines={1}>par {book.author}</Text>
+                      <Text style={styles.bookLocation}>📍 {book.location}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+
           {/* Bouton Déconnexion (toujours présent) */}
           <View style={styles.buttonContainer}>
             <Button
@@ -149,6 +226,8 @@ const ProfileScreen = ({ navigation }: any) => {
               color="#8B0000"
             />
           </View>
+
+          <View style={{ height: 40 }} />
         </>
       )}
     </ScrollView>
@@ -223,6 +302,84 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 10,
     marginBottom: 10,
+  },
+  booksSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  emptyBooksContainer: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  noBooksText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+  },
+  bookCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 15,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  bookImage: {
+    width: 100,
+    height: 140,
+  },
+  noImagePlaceholder: {
+    width: 100,
+    height: 140,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noImageText: {
+    fontSize: 40,
+  },
+  bookInfo: {
+    flex: 1,
+    padding: 15,
+    justifyContent: 'center',
+  },
+  bookTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#333',
+  },
+  bookAuthor: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 3,
+  },
+  bookLocation: {
+    fontSize: 12,
+    color: '#999',
   },
 });
 

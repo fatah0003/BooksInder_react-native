@@ -7,12 +7,15 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import AuthStack from './AuthStack';
 import { useAuth } from '../context/AuthContext';
 import BookDetailScreen from '../screens/BookDetailScreen';
+import AddBookScreen from '../screens/AddBookScreen'; 
+import EditBookScreen from '../screens/EditBookScreen';
+import UserPublicProfileScreen from '../screens/UserPublicProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createStackNavigator();
 const BookStack = createStackNavigator();
 
-// Stack pour les livres
+// Pour les livres
 function BookStackScreen() {
   return (
     <BookStack.Navigator>
@@ -29,11 +32,35 @@ function BookStackScreen() {
           headerBackTitle: 'Retour'
         }}
       />
+      <BookStack.Screen 
+        name="AddBook" 
+        component={AddBookScreen}
+        options={{ 
+          title: 'Ajouter un livre',
+          headerBackTitle: 'Retour'
+        }}
+      />
+      <BookStack.Screen 
+        name="EditBook" 
+        component={EditBookScreen}
+        options={{ 
+          title: 'Modifier le livre',
+          headerBackTitle: 'Retour'
+        }}
+      />
+      <BookStack.Screen 
+        name="UserPublicProfile" 
+        component={UserPublicProfileScreen}
+        options={{ 
+          title: 'Profil utilisateur',
+          headerBackTitle: 'Retour'
+        }}
+      />
     </BookStack.Navigator>
   );
 }
 
-// Stack pour le profil (ProfileScreen + EditProfileScreen)
+// Pour le profil (ProfileScreen + EditProfileScreen)
 function ProfileStackScreen() {
   return (
     <ProfileStack.Navigator>

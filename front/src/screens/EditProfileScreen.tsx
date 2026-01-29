@@ -15,7 +15,7 @@ import { infosUserService } from '../services/infosUserService';
 export default function EditProfileScreen({ navigation }: any) {
   const { user, refreshUser } = useAuth();
   
-  // Préremplir avec les données existantes si elles existent
+  // Préremplir avec les données initiales
   const [userName, setUserName] = useState(user?.infosUser?.userName || '');
   const [phoneNumber, setPhoneNumber] = useState(user?.infosUser?.phoneNumber || '');
   const [city, setCity] = useState(user?.infosUser?.city || '');
@@ -64,7 +64,7 @@ export default function EditProfileScreen({ navigation }: any) {
       }
     }
 
-    // Bio (optionnel)
+    // Bio 
     if (bio && bio.length > 1000) {
       newErrors.bio = 'Maximum 1000 caractères';
     }
@@ -97,7 +97,7 @@ const handleSubmit = async () => {
       Alert.alert('Succès', 'Profil complété avec succès !');
     }
 
-    // ⬇️ AJOUT : Attendre 500ms pour que la BDD se mette à jour
+    // Attendre 500ms pour que la BDD se mette à jour
     await new Promise(resolve => setTimeout(resolve, 500));
     
     await refreshUser();

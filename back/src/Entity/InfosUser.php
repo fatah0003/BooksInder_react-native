@@ -34,7 +34,7 @@ class InfosUser
         pattern: '/^[a-zA-Z0-9_-]+$/',
         message: 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores'
     )]
-    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write', 'user:public', 'book:read:detail'])]
     private ?string $userName = null;
 
     #[ORM\Column(length: 20, unique: true)]
@@ -50,7 +50,7 @@ class InfosUser
     #[ORM\Column(length: 50)]
     #[Assert\NotBlank]
     #[Assert\Length(min: 2, max: 50)]
-    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write', 'user:public'])]
     private ?string $city = null;
 
     #[ORM\Column]
@@ -66,7 +66,7 @@ class InfosUser
         max: 1000,
         maxMessage: 'La biographie ne peut pas dépasser {{ limit }} caractères'
     )]
-    #[Groups(['infosuser:read', 'user:read', 'infosuser:write'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write', 'user:public'])]
     private ?string $bio = null;
 
     #[ORM\Column]
