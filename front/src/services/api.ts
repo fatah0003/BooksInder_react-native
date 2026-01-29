@@ -15,9 +15,15 @@ export const api = {
   // Récupérer tous les livres
   getBooks: async () => {
     const response = await apiClient.get('/books');
-    // retourner juste le tableau de livres (dans "data")
     return response.data.data;
   },
+  
+  // Récupérer les détails d'un livre (nécessite authentification)
+getBookDetail: async (uuid: string): Promise<Book> => {
+  const response = await apiClient.get(`/books/${uuid}`);
+  console.log('📦 Response complète:', response.data);
+  return response.data.data || response.data; // Essaie .data.data en priorité
+},
 };
 
 export default apiClient;

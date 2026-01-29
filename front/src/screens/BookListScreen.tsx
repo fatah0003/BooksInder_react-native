@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
 import { api } from '../services/api';
 import { Book } from '../types/Book';
+import { useAuth } from '../context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
 
 export default function BookListScreen() {
   // États pour stocker les données
   const [books, setBooks] = useState<Book[]>([]);  // Liste des livres
   const [loading, setLoading] = useState(true);     // Indicateur de chargement
   const [error, setError] = useState<string | null>(null);  // Message d'erreur
+
+  const { user } = useAuth();
+  const navigation = useNavigation();
 
   // useEffect : se lance au chargement de l'écran
   useEffect(() => {
@@ -23,6 +28,27 @@ export default function BookListScreen() {
       setError(err.message);
     } finally {
       setLoading(false);  // Chargement terminé
+    }
+  };
+
+  // clic sur un livre pour voir les détail
+  const handleBookPress = (book: Book) => {
+    if (user) {
+      // Utilisateur connecté → Navigation vers détails
+      navigation.navigate('BookDetail' as never, { bookUuid: book.uuid } as never);
+    } else {
+      // Utilisateur non connecté → Message + Redirection vers connexion
+      Alert.alert(
+        'Connexion requise',
+        'Vous devez être connecté pour consulter les détails d\'un livre.',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Se connecter',
+            onPress: () => navigation.navigate('Profil' as never) // Va vers l'onglet Profil = AuthStack
+          }
+        ]
+      );
     }
   };
 
@@ -53,7 +79,10 @@ export default function BookListScreen() {
         data={books}
         keyExtractor={(item) => item.uuid}
         renderItem={({ item }) => (
-          <View style={styles.bookCard}>
+          <TouchableOpacity
+            style={styles.bookCard}
+            onPress={() => handleBookPress(item)}
+          >
             {(() => {
               // Chercher l'image de type "front" en priorité
               const frontImage = item.images.find(img => img.type === 'front');
@@ -70,9 +99,10 @@ export default function BookListScreen() {
             <Text style={styles.bookTitle}>{item.title}</Text>
             <Text style={styles.bookAuthor}>par {item.author}</Text>
             <Text style={styles.bookLocation}>📍 {item.location}</Text>
-          </View>
+          </TouchableOpacity>
         )}
       />
+
     </View>
   );
 }

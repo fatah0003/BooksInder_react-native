@@ -6,9 +6,32 @@ import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import AuthStack from './AuthStack';
 import { useAuth } from '../context/AuthContext';
+import BookDetailScreen from '../screens/BookDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createStackNavigator();
+const BookStack = createStackNavigator();
+
+// Stack pour les livres
+function BookStackScreen() {
+  return (
+    <BookStack.Navigator>
+      <BookStack.Screen 
+        name="BookList" 
+        component={BookListScreen}
+        options={{ headerShown: false }}
+      />
+      <BookStack.Screen 
+        name="BookDetail" 
+        component={BookDetailScreen}
+        options={{ 
+          title: 'Détails du livre',
+          headerBackTitle: 'Retour'
+        }}
+      />
+    </BookStack.Navigator>
+  );
+}
 
 // Stack pour le profil (ProfileScreen + EditProfileScreen)
 function ProfileStackScreen() {
@@ -38,7 +61,7 @@ const MainTabs = () => {
     <Tab.Navigator>
       <Tab.Screen 
         name="Livres" 
-        component={BookListScreen}
+        component={BookStackScreen}
         options={{ headerShown: false }}
       />
       <Tab.Screen 
