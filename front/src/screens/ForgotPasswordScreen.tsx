@@ -1,28 +1,46 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useAuth } from '../context/AuthContext'; // ⬅️ AJOUT
+import { passwordResetService } from '../services/passwordResetService';
 
-export default function LoginScreen({ navigation }: any) {
+export default function ForgotPasswordScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(''); // ⬅️ AJOUT
-  const { login } = useAuth(); // ⬅️ AJOUT
+  const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Veuillez remplir tous les champs');
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      setError('Veuillez entrer votre email');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setError('Email invalide');
       return;
     }
 
     try {
       setLoading(true);
       setError('');
-      await login(email, password);
-      Alert.alert('Succès', 'Connexion réussie !');
-      navigation.navigate('Profil');
+      
+      await passwordResetService.requestReset({ email: email.trim() });
+      
+      Alert.alert(
+        'Code envoyé !',
+        'Si cet email existe, vous recevrez un code de réinitialisation.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('ResetPassword', { email: email.trim() }),
+          },
+        ]
+      );
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur de connexion');
+      setError(err.response?.data?.message || 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
@@ -30,8 +48,10 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Booksinder</Text>
-      <Text style={styles.subtitle}>Connexion</Text>
+      <Text style={styles.title}>Mot de passe oublié</Text>
+      <Text style={styles.subtitle}>
+        Entrez votre email pour recevoir un code de réinitialisation
+      </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -42,35 +62,22 @@ export default function LoginScreen({ navigation }: any) {
         onChangeText={setEmail}
         keyboardType="email-address"
         autoCapitalize="none"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Mot de passe"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
+        editable={!loading}
       />
 
       <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleSubmit}
         disabled={loading}
       >
         <Text style={styles.buttonText}>
-          {loading ? 'Connexion...' : 'Se connecter'}
+          {loading ? 'Envoi en cours...' : 'Envoyer le code'}
         </Text>
       </TouchableOpacity>
 
-      {/* ⬇️ AJOUTEZ CES LIGNES */}
-      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-        <Text style={styles.link}>Mot de passe oublié ?</Text>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Text style={styles.link}>Retour à la connexion</Text>
       </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Pas encore de compte ?</Text>
-      </TouchableOpacity>
-
     </View>
   );
 }
@@ -83,14 +90,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
     color: '#333',
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 14,
     textAlign: 'center',
     marginBottom: 30,
     color: '#666',
@@ -110,18 +117,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  link: { // ⬅️ CORRIGÉ (était linkText)
+  link: {
     color: '#007AFF',
     fontSize: 14,
     textAlign: 'center',
     marginTop: 20,
   },
-  error: { // ⬅️ AJOUT
+  error: {
     color: 'red',
     marginBottom: 10,
     textAlign: 'center',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { authService } from '../services/authService';
 
 const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
@@ -28,10 +29,42 @@ const ProfileScreen = ({ navigation }: any) => {
     return date.toLocaleDateString('fr-FR');
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      '⚠️ Supprimer le compte',
+      'Cette action est irréversible. Toutes vos données seront définitivement supprimées.\n\nÊtes-vous sûr de vouloir continuer ?',
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (user?.uuid) {
+                await authService.deleteAccount(user.uuid);
+                Alert.alert('Compte supprimé', 'Votre compte a été supprimé avec succès.');
+                await logout();
+              }
+            } catch (error: any) {
+              Alert.alert(
+                'Erreur',
+                error.response?.data?.message || 'Impossible de supprimer le compte'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Mon Profil</Text>
-      
+
       {user && (
         <>
           {/* Email (toujours présent) */}
@@ -72,8 +105,8 @@ const ProfileScreen = ({ navigation }: any) => {
 
               {/* Bouton Modifier */}
               <View style={styles.buttonContainer}>
-                <Button 
-                  title="Modifier mon profil" 
+                <Button
+                  title="Modifier mon profil"
                   onPress={() => navigation.navigate('EditProfile')}
                   color="#007AFF"
                 />
@@ -91,7 +124,7 @@ const ProfileScreen = ({ navigation }: any) => {
                 </Text>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.completeButton}
                 onPress={() => navigation.navigate('EditProfile')}
               >
@@ -102,10 +135,18 @@ const ProfileScreen = ({ navigation }: any) => {
 
           {/* Bouton Déconnexion (toujours présent) */}
           <View style={styles.buttonContainer}>
-            <Button 
-              title="Se déconnecter" 
+            <Button
+              title="Se déconnecter"
               onPress={handleLogout}
               color="#d9534f"
+            />
+          </View>
+          {/* Bouton Suppression (toujours présent) */}
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Supprimer mon compte"
+              onPress={handleDeleteAccount}
+              color="#8B0000"
             />
           </View>
         </>
