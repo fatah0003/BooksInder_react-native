@@ -25,27 +25,43 @@ export interface BooksResponse {
   };
 }
 
+export interface BookFilters {
+  search?: string;
+  location?: string;
+  category?: string;
+  availableExchangeType?: string;
+  state?: string;
+}
+
 export const api = {
-  // Récupérer tous les livres avec pagination
-  getBooks: async (page: number = 1, limit: number = 10): Promise<BooksResponse> => {
-    const response = await apiClient.get(`/books?page=${page}&limit=${limit}`);
+  // livres pagination + filtres
+  getBooks: async (page: number = 1, limit: number = 10, filters?: BookFilters): Promise<BooksResponse> => {
+    const params: any = { page, limit };
+    
+    if (filters?.search) params.search = filters.search;
+    if (filters?.location) params.location = filters.location;
+    if (filters?.category) params.category = filters.category;
+    if (filters?.availableExchangeType) params.availableExchangeType = filters.availableExchangeType;
+    if (filters?.state) params.state = filters.state;
+
+    const response = await apiClient.get('/books', { params });
     return response.data;
   },
   
-  // Récupérer les détails d'un livre
+  // détails livre
   getBookDetail: async (uuid: string): Promise<Book> => {
     const response = await apiClient.get(`/books/${uuid}`);
-    console.log('Response complète:', response.data);
+    console.log('📦 Response complète:', response.data);
     return response.data.data || response.data;
   },
 
-  // Récupérer le profil public d'un utilisateur + ses livres
+  // profil public utilisateur + ses livres
   getUserPublicProfile: async (userUuid: string) => {
     const response = await apiClient.get(`/users/${userUuid}/public-profile`);
     return response.data.data;
   },
 
-  // Récupérer MES livres
+  // mes livres
   getMyBooks: async (): Promise<Book[]> => {
     const response = await apiClient.get('/books/my-books');
     return response.data.data;
