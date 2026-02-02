@@ -85,12 +85,12 @@ const ProfileScreen = ({ navigation }: any) => {
   };
 
   const handleBookPress = (bookUuid: string) => {
-  // naviguer vers la Stack Books, puis vers BookDetail
-  navigation.getParent()?.navigate('Livres', {
-    screen: 'BookDetail',
-    params: { bookUuid }
-  });
-};
+    // naviguer vers la Stack Books, puis vers BookDetail
+    navigation.getParent()?.navigate('Livres', {
+      screen: 'BookDetail',
+      params: { bookUuid }
+    });
+  };
 
 
   return (
@@ -164,6 +164,15 @@ const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </>
           )}
+
+          {/* Bouton Demandes reçues */}
+          <TouchableOpacity
+            style={styles.exchangesButton}
+            onPress={() => navigation.navigate('ReceivedExchanges')}
+          >
+            <Text style={styles.exchangesButtonText}> Mes Echange</Text>
+          </TouchableOpacity>
+
 
           {/* Section Mes livres */}
           <View style={styles.booksSection}>
@@ -299,6 +308,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  exchangesButton: {
+  backgroundColor: '#34C759',
+  padding: 15,
+  borderRadius: 10,
+  alignItems: 'center',
+  marginBottom: 20,
+},
+exchangesButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: 'bold',
+},
+
   buttonContainer: {
     marginTop: 10,
     marginBottom: 10,

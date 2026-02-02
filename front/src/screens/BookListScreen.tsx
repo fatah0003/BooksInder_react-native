@@ -1,17 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  StyleSheet, 
-  Image, 
-  TouchableOpacity, 
-  Alert, 
-  ActivityIndicator,
-  TextInput,
-  ScrollView,
-  Modal
-} from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicator,TextInput,ScrollView,Modal } from 'react-native';
 import { api, BookFilters } from '../services/api';
 import { Book } from '../types/Book';
 import { useAuth } from '../context/AuthContext';

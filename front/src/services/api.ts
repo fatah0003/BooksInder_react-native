@@ -66,6 +66,76 @@ export const api = {
     const response = await apiClient.get('/books/my-books');
     return response.data.data;
   },
+
+  // ============================================
+// EXCHANGES
+// ============================================
+
+// Créer une demande d'échange
+createExchange: async (bookOneId: number) => {
+  const response = await apiClient.post('/exchanges', {
+    bookOneId
+  });
+  return response.data;
+},
+
+
+// Récupérer les demandes reçues
+getReceivedExchanges: async (status?: string, limit: number = 10) => {
+  const params: any = { limit };
+  if (status) params.status = status;
+  
+  const response = await apiClient.get('/exchanges/received', { params });
+  return response.data;
+},
+
+// Récupérer les demandes envoyées
+getSentExchanges: async (limit: number = 10) => {
+  const params = { limit };
+  const response = await apiClient.get('/exchanges/sent', { params });
+  return response.data;
+},
+
+// Récupérer les échanges complétés
+getCompletedExchanges: async (limit: number = 10) => {
+  const params = { limit };
+  const response = await apiClient.get('/exchanges/completed', { params });
+  return response.data;
+},
+
+// Détail d'un échange
+getExchangeDetail: async (uuid: string) => {
+  const response = await apiClient.get(`/exchanges/${uuid}`);
+  return response.data;
+},
+
+// Livres disponibles du demandeur
+getAvailableBooks: async (exchangeUuid: string) => {
+  const response = await apiClient.get(`/exchanges/${exchangeUuid}/available-books`);
+  return response.data;
+},
+
+// Accepter un échange
+acceptExchange: async (uuid: string, bookTwoId: number, exchangeType: string) => {
+  const response = await apiClient.put(`/exchanges/${uuid}/accept`, {
+    bookTwoId,
+    exchangeType
+  });
+  return response.data;
+},
+
+// Refuser un échange
+rejectExchange: async (uuid: string) => {
+  const response = await apiClient.put(`/exchanges/${uuid}/reject`);
+  return response.data;
+},
+
+// Annuler un échange
+cancelExchange: async (uuid: string) => {
+  const response = await apiClient.delete(`/exchanges/${uuid}/cancel`);
+  return response.data;
+},
+
 };
 
 export default apiClient;

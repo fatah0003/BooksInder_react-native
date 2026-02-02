@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { useRoute, RouteProp, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Book } from '../types/Book';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -26,16 +26,38 @@ export default function BookDetailScreen() {
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [existingExchange, setExistingExchange] = useState<any>(null);
+  const [checkingExchange, setCheckingExchange] = useState(false);
+
 
   useEffect(() => {
     loadBookDetail();
   }, []);
+  
+  useFocusEffect(
+  React.useCallback(() => {
+    if (book?.uuid && user) {
+      checkExistingExchange(book.uuid);
+    }
+  }, [book?.uuid, user])
+);
 
   const loadBookDetail = async () => {
     try {
-      const data = await api.getBookDetail(bookUuid);
-      console.log('📚 Données reçues du backend:', JSON.stringify(data, null, 2));
-      setBook(data);
+      const response = await api.getBookDetail(bookUuid);
+      console.log('📚 Réponse COMPLÈTE:', JSON.stringify(response, null, 2));
+
+      const bookData = response.data || response;
+      setBook(bookData);
+
+      // ✅ AJOUTE CETTE LIGNE
+      if (bookData.uuid && user) {
+        checkExistingExchange(bookData.uuid);
+      }
+
+      console.log('📖 book.id après setBook:', bookData.id);
+      console.log('📖 book.uuid après setBook:', bookData.uuid);
+
     } catch (err: any) {
       console.error('❌ Erreur:', err.message);
       setError(err.message);
@@ -44,17 +66,40 @@ export default function BookDetailScreen() {
     }
   };
 
+
+  const checkExistingExchange = async (bookUuid: string) => {
+    if (!user) return;
+
+    setCheckingExchange(true);
+    try {
+      const response = await api.getSentExchanges(50);
+      console.log('🔍 Demandes envoyées:', JSON.stringify(response, null, 2));
+
+      if (response.success) {
+        // ✅ Chercher par UUID au lieu de ID
+        const existing = response.data.find(
+          (ex: any) => ex.bookOne?.uuid === bookUuid && ex.status === 'pending'
+        );
+        console.log('🔍 Demande existante trouvée:', existing);
+        setExistingExchange(existing || null);
+      }
+    } catch (error) {
+      console.log('Erreur vérification demande:', error);
+    } finally {
+      setCheckingExchange(false);
+    }
+  };
+
+
+
   const isOwner = user && book?.user && user.uuid === book.user.uuid;
 
-  // ← NOUVELLE FONCTION : Gérer le clic sur le propriétaire
   const handleOwnerPress = () => {
     if (!book?.user) return;
 
     if (user?.uuid === book.user.uuid) {
-      // C'est mon livre → Aller vers l'onglet Profil
       navigation.navigate('Profil' as never);
     } else {
-      // C'est quelqu'un d'autre → Profil public
       navigation.navigate('UserPublicProfile' as never, { userUuid: book.user.uuid } as never);
     }
   };
@@ -88,6 +133,67 @@ export default function BookDetailScreen() {
 
   const handleEdit = () => {
     navigation.navigate('EditBook' as never, { bookUuid, book } as never);
+  };
+
+  const handleRequestExchange = async () => {
+    if (!user) {
+      Alert.alert('Connexion requise', 'Vous devez être connecté pour demander un échange');
+      return;
+    }
+
+    if (!book) return;
+
+    Alert.alert(
+      'Demander un échange',
+      `Voulez-vous demander "${book.title}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Confirmer',
+          onPress: async () => {
+            try {
+              console.log('📤 Envoi demande pour book.id:', book.id);
+
+              if (!book.id) {
+                Alert.alert('Erreur', 'ID du livre introuvable');
+                return;
+              }
+
+              // ✅ CORRECTION : Stocker la réponse
+              const response = await api.createExchange(book.id);
+              console.log('✅ Réponse:', response);
+
+              Alert.alert(
+                'Demande envoyée !',
+                'Le propriétaire du livre recevra votre demande et choisira un de vos livres en échange.',
+                [{
+                  text: 'OK',
+                  onPress: () => {
+                    // ✅ AJOUTE CES LIGNES
+                    if (book.uuid) {
+                      checkExistingExchange(book.uuid);
+                    }
+
+                  }
+                }]
+              );
+
+            } catch (error: any) {
+              console.log('❌ Erreur complète:', error);
+              console.log('❌ error.response:', error.response);
+              console.log('❌ error.message:', error.message);
+
+              const errorMessage = error.response?.data?.message
+                || error.response?.data?.errors
+                || error.message
+                || 'Impossible d\'envoyer la demande';
+
+              Alert.alert('Erreur', typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -154,7 +260,6 @@ export default function BookDetailScreen() {
             </Text>
           </TouchableOpacity>
         )}
-
 
         <View style={styles.separator} />
 
@@ -231,6 +336,46 @@ export default function BookDetailScreen() {
             </View>
           </>
         )}
+
+        {/* Bouton Demander un échange OU Voir ma demande (si PAS propriétaire) */}
+        {!isOwner && user && book.bookStatus === 'active' && (
+          <>
+            <View style={styles.separator} />
+            {existingExchange ? (
+              <TouchableOpacity
+                style={styles.viewRequestButton}
+                onPress={() => navigation.navigate('DetailExchange' as never, { exchangeUuid: existingExchange.uuid } as never)}
+
+              >
+
+                <Text style={styles.viewRequestButtonText}>📋 Voir ma demande</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.requestButton}
+                onPress={handleRequestExchange}
+                disabled={checkingExchange}
+              >
+                <Text style={styles.requestButtonText}>
+                  {checkingExchange ? 'Vérification...' : '🔄 Demander un échange'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+
+        {/* Message si non connecté */}
+        {!isOwner && !user && (
+          <>
+            <View style={styles.separator} />
+            <View style={styles.loginPrompt}>
+              <Text style={styles.loginPromptText}>
+                Connectez-vous pour demander ce livre
+              </Text>
+            </View>
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -268,7 +413,6 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 10,
   },
-  // styles pour le propriétaire
   ownerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,5 +523,41 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  requestButton: {
+    backgroundColor: '#34C759',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  requestButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  viewRequestButton: {
+    backgroundColor: '#FF9500',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  viewRequestButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  loginPrompt: {
+    backgroundColor: '#FFF3CD',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  loginPromptText: {
+    color: '#856404',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

@@ -34,7 +34,7 @@ class InfosUser
         pattern: '/^[a-zA-Z0-9_-]+$/',
         message: 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores'
     )]
-    #[Groups(['infosuser:read', 'user:read', 'infosuser:write', 'user:public', 'book:read:detail'])]
+    #[Groups(['infosuser:read', 'user:read', 'infosuser:write', 'user:public', 'book:read:detail', 'exchange:read', 'exchange:detail'])]
     private ?string $userName = null;
 
     #[ORM\Column(length: 20, unique: true)]

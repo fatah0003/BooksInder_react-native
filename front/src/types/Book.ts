@@ -17,6 +17,7 @@ export interface BookOwner {
 
 // Structure d'un livre
 export interface Book {
+  id: number;
   uuid: string;
   title: string;
   author: string;

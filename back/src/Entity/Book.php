@@ -20,15 +20,16 @@ class Book
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['book:read'])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 36, unique: true)]
-    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail', 'book:read:detail'])]
+    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail', 'book:read:detail', 'exchange:detail'])]
     private ?string $uuid = null;
 
 
     #[ORM\Column(length: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
     private ?string $title = null;
 
     #[ORM\Column(length: 100)]
