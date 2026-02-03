@@ -49,18 +49,33 @@ export default function NotificationsScreen() {
       }
 
       // Navigation selon le type
-      if (item.type === 'exchange_request' || 
-          item.type === 'exchange_accepted' || 
-          item.type === 'exchange_rejected' ||
-          item.type === 'exchange_cancelled') {
+      if (item.type === 'exchange_request' ||
+        item.type === 'exchange_accepted' ||
+        item.type === 'exchange_rejected' ||
+        item.type === 'exchange_cancelled') {
         // Aller vers l'onglet Profil > Mes demandes
         navigation.getParent()?.navigate('Profil', {
           screen: 'ReceivedExchanges',
         });
       } else if (item.type === 'message_received') {
-        // Aller vers le chat (si implémenté)
-        Alert.alert('Chat', 'Navigation vers le chat à implémenter');
+        // Extraire les données de la notification
+        const notifData = typeof item.data === 'string'
+          ? JSON.parse(item.data)
+          : item.data;
+
+        const conversationId = notifData.conversationId;
+        const senderUuid = notifData.senderUuid;
+
+        // Naviguer vers l'onglet Chat > ChatScreen
+        navigation.getParent()?.navigate('Chat', {
+          screen: 'ChatScreen',
+          params: {
+            conversationId: conversationId,
+            otherUserUuid: senderUuid,
+          },
+        });
       }
+
 
       // Recharger pour mettre à jour le statut
       loadNotifications();

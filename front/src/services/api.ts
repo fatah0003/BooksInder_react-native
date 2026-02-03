@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Book } from '../types/Book';
+import type { Conversation, Message } from '../types/Chat';
 
 const API_URL = 'http://192.168.1.115:8000/api';
 
@@ -179,7 +180,40 @@ clearReadNotifications: async () => {
   return response.data;
 },
 
+// ============================================
+// CHAT
+// ============================================
 
+// Récupère toutes les conversations de l'utilisateur connecté
+getConversations: async (): Promise<Conversation[]> => {
+  const response = await apiClient.get('/chat/conversations');
+  return response.data.data;
+},
+
+// Récupère tous les messages d'une conversation spécifique
+getConversationMessages: async (conversationId: string): Promise<Message[]> => {
+  const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`);
+  return response.data.data;
+},
+
+// Envoie un nouveau message dans une conversation
+sendMessage: async (conversationId: string, content: string): Promise<Message> => {
+  const response = await apiClient.post(`/chat/conversations/${conversationId}/messages`, {
+    content: content
+  });
+  return response.data.data;
+},
+
+// Compte le nombre de conversations avec messages non lus
+getUnreadConversationsCount: async (): Promise<number> => {
+  const response = await apiClient.get('/chat/unread-count');
+  return response.data.data.count;
+},
+
+// Marque tous les messages d'une conversation comme lus
+markConversationAsRead: async (conversationId: string): Promise<void> => {
+  await apiClient.post(`/chat/conversations/${conversationId}/mark-read`);
+},
 };
 
 export default apiClient;

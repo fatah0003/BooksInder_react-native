@@ -145,4 +145,92 @@ class ChatController extends AbstractController
         ], 201);
     }
 
+    #[Route('/unread-count', name: 'unread_count', methods: ['GET'])]
+    public function getUnreadCount(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['success' => false, 'error' => 'Non authentifié'], 401);
+        }
+
+        $userUuid = $user->getUuid();
+
+        // Récupère toutes les conversations de l'utilisateur
+        $conversations = $this->dm
+            ->getRepository(Conversation::class)
+            ->findBy(['participants' => $userUuid]);
+
+        $unreadConversationsCount = 0;
+
+        // Pour chaque conversation, vérifie s'il y a au moins 1 message non lu
+        foreach ($conversations as $conversation) {
+            $hasUnreadMessages = $this->dm
+                ->getRepository(Message::class)
+                ->createQueryBuilder()
+                ->field('conversationId')->equals($conversation->getId())
+                ->field('senderUuid')->notEqual($userUuid) // Pas mes propres messages
+                ->field('readBy')->notIn([$userUuid]) // Pas encore lu par moi
+                ->limit(1) // On cherche juste s'il y en a au moins 1
+                ->count()
+                ->getQuery()
+                ->execute();
+
+            // Si au moins 1 message non lu, on compte cette conversation
+            if ($hasUnreadMessages > 0) {
+                $unreadConversationsCount++;
+            }
+        }
+
+        return $this->json([
+            'success' => true,
+            'data' => ['count' => $unreadConversationsCount]
+        ]);
+    }
+
+    #[Route('/conversations/{id}/mark-read', name: 'mark_read', methods: ['POST'])]
+    public function markConversationAsRead(string $id): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['success' => false, 'error' => 'Non authentifié'], 401);
+        }
+
+        /** @var Conversation|null $conversation */
+        $conversation = $this->dm->getRepository(Conversation::class)->find($id);
+        if (!$conversation) {
+            return $this->json(['success' => false, 'error' => 'Conversation introuvable'], 404);
+        }
+
+        if (!in_array($user->getUuid(), $conversation->getParticipants(), true)) {
+            return $this->json(['success' => false, 'error' => 'Accès refusé'], 403);
+        }
+
+        $userUuid = $user->getUuid();
+
+        // Récupère tous les messages de cette conversation que je n'ai pas encore lus
+        $messages = $this->dm
+            ->getRepository(Message::class)
+            ->createQueryBuilder()
+            ->field('conversationId')->equals($id)
+            ->field('senderUuid')->notEqual($userUuid) // Pas mes propres messages
+            ->field('readBy')->notIn([$userUuid]) // Pas encore lu par moi
+            ->getQuery()
+            ->execute();
+
+        // Marque chaque message comme lu
+        foreach ($messages as $message) {
+            $message->addReadBy($userUuid);
+            $this->dm->persist($message);
+        }
+
+        $this->dm->flush();
+
+        return $this->json([
+            'success' => true,
+            'data' => ['markedCount' => count($messages)]
+        ]);
+    }
+
+
+
 }
