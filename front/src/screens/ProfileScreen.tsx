@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Button, Alert, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
@@ -10,13 +10,31 @@ const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
   const [myBooks, setMyBooks] = useState<Book[]>([]);
   const [loadingBooks, setLoadingBooks] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Charger mes livres à chaque fois que l'écran est affiché
   useFocusEffect(
     React.useCallback(() => {
       loadMyBooks();
+      loadUnreadCount();
     }, [])
   );
+  // Polling automatique toutes les 30 secondes
+  useEffect(() => {
+    if (!user) return;
+
+    // Charger immédiatement
+    loadUnreadCount();
+
+    // Puis toutes les 30 secondes
+    const interval = setInterval(() => {
+      loadUnreadCount();
+    }, 30000); // 30 secondes = 30000 ms
+
+    // Nettoyer l'intervalle quand le composant est démonté
+    return () => clearInterval(interval);
+  }, [user]);
+
 
   const loadMyBooks = async () => {
     try {
@@ -29,6 +47,18 @@ const ProfileScreen = ({ navigation }: any) => {
       setLoadingBooks(false);
     }
   };
+
+  const loadUnreadCount = async () => {
+    try {
+      const response = await api.getUnreadNotificationsCount();
+      if (response.success) {
+        setUnreadCount(response.unreadCount);
+      }
+    } catch (error) {
+      console.error('Erreur chargement compteur:', error);
+    }
+  };
+
 
   const handleLogout = () => {
     Alert.alert(
@@ -96,6 +126,22 @@ const ProfileScreen = ({ navigation }: any) => {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Mon Profil</Text>
+      {user && (
+        <TouchableOpacity
+          style={styles.notificationsButton}
+          onPress={() => navigation.navigate('Notifications')}
+        >
+          <View style={styles.notificationButtonContent}>
+            <Text style={styles.notificationsButtonText}>🔔 Notifications</Text>
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+
+      )}
 
       {user && (
         <>
@@ -309,17 +355,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   exchangesButton: {
-  backgroundColor: '#34C759',
-  padding: 15,
-  borderRadius: 10,
-  alignItems: 'center',
-  marginBottom: 20,
-},
-exchangesButtonText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: 'bold',
-},
+    backgroundColor: '#34C759',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  exchangesButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 
   buttonContainer: {
     marginTop: 10,
@@ -403,6 +449,37 @@ exchangesButtonText: {
     fontSize: 12,
     color: '#999',
   },
+  notificationsButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  notificationButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notificationsButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  badge: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+
 });
 
 export default ProfileScreen;

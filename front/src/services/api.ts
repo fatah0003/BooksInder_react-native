@@ -136,6 +136,50 @@ cancelExchange: async (uuid: string) => {
   return response.data;
 },
 
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+// Récupérer les notifications
+getNotifications: async (limit: number = 20, unread: boolean = false) => {
+  const params: any = { limit };
+  if (unread) params.unread = true;
+  
+  const response = await apiClient.get('/notifications', { params });
+  return response.data;
+},
+
+// Compter les notifications non lues
+getUnreadNotificationsCount: async () => {
+  const response = await apiClient.get('/notifications/unread-count');
+  return response.data;
+},
+
+// Marquer une notification comme lue
+markNotificationAsRead: async (id: number) => {
+  const response = await apiClient.patch(`/notifications/${id}/read`);
+  return response.data;
+},
+
+// Marquer toutes comme lues
+markAllNotificationsAsRead: async () => {
+  const response = await apiClient.patch('/notifications/mark-all-read');
+  return response.data;
+},
+
+// Supprimer une notification
+deleteNotification: async (id: number) => {
+  const response = await apiClient.delete(`/notifications/${id}`);
+  return response.data;
+},
+
+// Supprimer toutes les notifications lues
+clearReadNotifications: async () => {
+  const response = await apiClient.delete('/notifications/clear-read');
+  return response.data;
+},
+
+
 };
 
 export default apiClient;

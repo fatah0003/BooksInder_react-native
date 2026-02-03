@@ -12,6 +12,7 @@ import EditBookScreen from '../screens/EditBookScreen';
 import UserPublicProfileScreen from '../screens/UserPublicProfileScreen';
 import ReceivedExchangesScreen from '../screens/ReceivedExchangesScreen';
 import DetailExchangeScreen from '../screens/DetailExchangeScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createStackNavigator();
@@ -118,6 +119,11 @@ function ProfileStackScreen() {
           title: 'Détail de l\'échange',
           headerBackTitle: 'Retour'
         }}
+      />
+      <ProfileStack.Screen 
+        name="Notifications" 
+        component={NotificationsScreen}
+        options={{ title: 'Notifications', headerBackTitle: 'Retour' }}
       />
     </ProfileStack.Navigator>
   );
