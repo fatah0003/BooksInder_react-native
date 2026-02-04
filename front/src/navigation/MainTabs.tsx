@@ -18,6 +18,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import ConversationsListScreen from '../screens/ConversationsListScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ChatScreen from '../screens/ChatScreen';
+import { Ionicons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createStackNavigator();
@@ -192,14 +193,11 @@ const MainTabs = () => {
     }
   };
 
-
-
-  // Charge au démarrage
   // Charge au démarrage
   useEffect(() => {
     if (user) {
       loadUnreadChatsCount();
-      loadUnreadNotificationsCount(); // <-- Ajoute cette ligne
+      loadUnreadNotificationsCount();
     }
   }, [user]);
 
@@ -218,36 +216,48 @@ const MainTabs = () => {
 
   return (
     <Tab.Navigator>
-      <Tab.Screen
-        name="Livres"
-        component={BookStackScreen}
-        options={{ headerShown: false }}
-      />
+  {/* Livres */}
+  <Tab.Screen
+    name="Livres"
+    component={BookStackScreen}
+    options={{
+      headerShown: false,
+      tabBarLabel: 'Livres',
+      tabBarIcon: ({ color, size }) => (
+        <Ionicons name="book-outline" size={size} color={color} />
+      ),
+    }}
+  />
 
-      <Tab.Screen
-        name="Chat"
-        component={user ? ChatStack : AuthStack}
-        options={{
-          headerShown: false,
-          tabBarLabel: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size, color }}>💬</Text>
-          ),
-          tabBarBadge: unreadChatsCount > 0 ? unreadChatsCount : undefined,
-        }}
-      />
+  {/* Chat */}
+  <Tab.Screen
+    name="Chat"
+    component={user ? ChatStack : AuthStack}
+    options={{
+      headerShown: false,
+      tabBarLabel: 'Chat',
+      tabBarIcon: ({ color, size }) => (
+        <Ionicons name="chatbubble-outline" size={size} color={color} />
+      ),
+      tabBarBadge: unreadChatsCount > 0 ? unreadChatsCount : undefined,
+    }}
+  />
 
+  {/* Profil */}
+  <Tab.Screen
+    name="Profil"
+    component={user ? ProfileStackScreen : AuthStack}
+    options={{
+      headerShown: false,
+      tabBarLabel: 'Profil',
+      tabBarIcon: ({ color, size }) => (
+        <Ionicons name="person-outline" size={size} color={color} />
+      ),
+      tabBarBadge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
+    }}
+  />
+</Tab.Navigator>
 
-      <Tab.Screen
-        name="Profil"
-        component={user ? ProfileStackScreen : AuthStack}
-        options={{
-          headerShown: false,
-          tabBarBadge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
-        }}
-      />
-
-    </Tab.Navigator>
 
   );
 };

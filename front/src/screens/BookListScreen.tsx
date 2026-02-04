@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicator,TextInput,ScrollView,Modal } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, Alert, ActivityIndicator, TextInput, ScrollView, Modal } from 'react-native';
 import { api, BookFilters } from '../services/api';
 import { Book } from '../types/Book';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 // Listes des options pour les filtres
 const CATEGORIES = [
@@ -35,10 +36,9 @@ export default function BookListScreen() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
-  
+
   // États pour les filtres
-  const [searchQuery, setSearchQuery] = useState(''); // ← Texte dans le champ (pas encore appliqué)
-  const [appliedSearch, setAppliedSearch] = useState(''); // ← Recherche validée
+  const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<BookFilters>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [activeFilterType, setActiveFilterType] = useState<FilterType | null>(null);
@@ -65,7 +65,6 @@ export default function BookListScreen() {
 
   const loadBooks = async (page: number = 1, refresh: boolean = false, currentFilters: BookFilters = {}) => {
     if (isLoadingRef.current) {
-      console.log('⚠️ Chargement déjà en cours');
       return;
     }
 
@@ -78,22 +77,18 @@ export default function BookListScreen() {
     }
 
     try {
-      console.log('📚 Requête avec filtres:', currentFilters);
       const response = await api.getBooks(page, 10, currentFilters);
-      console.log('✅ Réponse reçue:', response.data.length, 'livres');
-      
+
       if (refresh) {
         setBooks(response.data);
       } else {
         setBooks((prevBooks) => [...prevBooks, ...response.data]);
       }
-      
+
       setHasNextPage(response.pagination.hasNextPage);
       setCurrentPage(page);
       setError(null);
     } catch (err: any) {
-      console.error('❌ Erreur complète:', err);
-      console.error('❌ Response:', err.response?.data);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -102,18 +97,14 @@ export default function BookListScreen() {
     }
   };
 
-  // ← NOUVELLE FONCTION : Valider la recherche
   const handleSearchSubmit = () => {
-    console.log('🔍 Recherche validée:', searchQuery);
-    setAppliedSearch(searchQuery);
-    
     const newFilters = { ...filters };
     if (searchQuery.trim()) {
       newFilters.search = searchQuery.trim();
     } else {
       delete newFilters.search;
     }
-    
+
     setFilters(newFilters);
     setBooks([]);
     setCurrentPage(1);
@@ -140,8 +131,8 @@ export default function BookListScreen() {
         'Vous devez être connecté pour consulter les détails d\'un livre.',
         [
           { text: 'Annuler', style: 'cancel' },
-          { 
-            text: 'Se connecter', 
+          {
+            text: 'Se connecter',
             onPress: () => navigation.navigate('Profil' as never)
           }
         ]
@@ -158,8 +149,8 @@ export default function BookListScreen() {
         'Vous devez être connecté pour ajouter un livre.',
         [
           { text: 'Annuler', style: 'cancel' },
-          { 
-            text: 'Se connecter', 
+          {
+            text: 'Se connecter',
             onPress: () => navigation.navigate('Profil' as never)
           }
         ]
@@ -175,7 +166,7 @@ export default function BookListScreen() {
 
   const applyFilter = (filterType: string, value: string) => {
     const newFilters = { ...filters };
-    
+
     if (filterType === 'location') {
       newFilters.location = value;
     } else if (filterType === 'category') {
@@ -185,9 +176,6 @@ export default function BookListScreen() {
     } else if (filterType === 'state') {
       newFilters.state = value;
     }
-
-    console.log('🎯 Application filtre:', filterType, '=', value);
-    console.log('📋 Nouveaux filtres:', newFilters);
 
     setFilters(newFilters);
     setBooks([]);
@@ -201,15 +189,11 @@ export default function BookListScreen() {
   const removeFilter = (filterKey: keyof BookFilters) => {
     const newFilters = { ...filters };
     delete newFilters[filterKey];
-    
-    // Si on supprime la recherche, vider aussi le champ
+
     if (filterKey === 'search') {
       setSearchQuery('');
-      setAppliedSearch('');
     }
-    
-    console.log('🗑️ Suppression filtre:', filterKey);
-    
+
     setFilters(newFilters);
     setBooks([]);
     setCurrentPage(1);
@@ -218,10 +202,10 @@ export default function BookListScreen() {
     loadBooks(1, true, newFilters);
   };
 
+  // Fonction pour tout réinitialiser
   const resetAllFilters = () => {
-    console.log('🔄 Réinitialisation totale');
+    console.log('🔄 Réinitialisation totale des filtres');
     setSearchQuery('');
-    setAppliedSearch('');
     setFilters({});
     setBooks([]);
     setCurrentPage(1);
@@ -337,7 +321,7 @@ export default function BookListScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#4CAF50" />
         <Text style={styles.loadingText}>Chargement des livres...</Text>
       </View>
     );
@@ -347,8 +331,8 @@ export default function BookListScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Erreur : {error}</Text>
-        <TouchableOpacity 
-          style={styles.retryButton} 
+        <TouchableOpacity
+          style={styles.retryButton}
           onPress={resetAndLoad}
         >
           <Text style={styles.retryButtonText}>Réessayer</Text>
@@ -361,30 +345,85 @@ export default function BookListScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Catalogue Booksinder</Text>
-
-      {/* Barre de recherche avec bouton */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="🔍 Rechercher un livre, auteur..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearchSubmit}
-          returnKeyType="search"
-        />
-        <TouchableOpacity 
-          style={styles.searchButton}
-          onPress={handleSearchSubmit}
-        >
-          <Text style={styles.searchButtonText}>Rechercher</Text>
-        </TouchableOpacity>
+      {/* Header avec logo */}
+      <View style={styles.header}>
+        <Text style={styles.logo}>
+          <Text style={styles.logoBook}>Book</Text>
+          <Text style={styles.logoInsider}>Insider</Text>
+        </Text>
       </View>
 
-      {/* Filtres actifs */}
+      {/* Barre de recherche */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Chercher un livre par titre, auteur"
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearchSubmit}
+            returnKeyType="search"
+          />
+          <TouchableOpacity style={styles.micIcon}>
+            <Ionicons name="mic" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Filtres */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.topFiltersContainer}
+        contentContainerStyle={styles.topFiltersContent}
+      >
+        <TouchableOpacity
+          style={[styles.topFilterChip, filters.location && styles.topFilterChipActive]}
+          onPress={() => openFilterModal('location')}
+        >
+          <Text style={[styles.topFilterText, filters.location && styles.topFilterTextActive]}>
+            Ville
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.topFilterChip, filters.category && styles.topFilterChipActive]}
+          onPress={() => openFilterModal('category')}
+        >
+          <Text style={[styles.topFilterText, filters.category && styles.topFilterTextActive]}>
+            Catégorie
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.topFilterChip, filters.availableExchangeType && styles.topFilterChipActive]}
+          onPress={() => openFilterModal('exchange')}
+        >
+          <Text style={[styles.topFilterText, filters.availableExchangeType && styles.topFilterTextActive]}>
+            Type d'échange
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.topFilterChip, filters.state && styles.topFilterChipActive]}
+          onPress={() => openFilterModal('state')}
+        >
+          <Text style={[styles.topFilterText, filters.state && styles.topFilterTextActive]}>
+            État
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* filtres actifs*/}
       {hasActiveFilters && (
         <View style={styles.activeFiltersContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.activeFiltersScroll}
+          >
             {filters.search && (
               <TouchableOpacity
                 style={styles.activeFilterChip}
@@ -437,86 +476,73 @@ export default function BookListScreen() {
               </TouchableOpacity>
             )}
           </ScrollView>
-          <TouchableOpacity onPress={resetAllFilters}>
-            <Text style={styles.resetButton}>Effacer</Text>
+
+          {/* ✅ Bouton Effacer */}
+          <TouchableOpacity onPress={resetAllFilters} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>Effacer</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Boutons de filtres */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterButtonsContainer}
-      >
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => openFilterModal('location')}
-        >
-          <Text style={styles.filterButtonText}>📍 Ville</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => openFilterModal('category')}
-        >
-          <Text style={styles.filterButtonText}>📚 Catégorie</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => openFilterModal('exchange')}
-        >
-          <Text style={styles.filterButtonText}>🔄 Échange</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => openFilterModal('state')}
-        >
-          <Text style={styles.filterButtonText}>🏷️ État</Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Liste des livres */}
+      {/* Grille des livres */}
       <FlatList
         data={books}
         keyExtractor={(item) => item.uuid}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.bookCard}
-            onPress={() => handleBookPress(item)}
-          >
-            {(() => {
-              const frontImage = item.images.find(img => img.type === 'front');
-              const imageToShow = frontImage || item.images[0];
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.listContent}
+        renderItem={({ item }) => {
+          const frontImage = item.images.find(img => img.type === 'front');
+          const imageToShow = frontImage || item.images[0];
 
-              return imageToShow ? (
+          return (
+            <TouchableOpacity
+              style={styles.bookCard}
+              onPress={() => handleBookPress(item)}
+            >
+              {imageToShow ? (
                 <Image
                   source={{ uri: `http://192.168.1.115:8000${imageToShow.imageUrl}` }}
                   style={styles.bookImage}
+                  resizeMode="cover"
                 />
-              ) : null;
-            })()}
-            <Text style={styles.bookTitle}>{item.title}</Text>
-            <Text style={styles.bookAuthor}>par {item.author}</Text>
-            <Text style={styles.bookLocation}>📍 {item.location}</Text>
-          </TouchableOpacity>
-        )}
+              ) : (
+                <View style={styles.noImagePlaceholder}>
+                  <View style={styles.iconCircle}>
+                    <Ionicons name="book-outline" size={56} color="#47769d" />
+                  </View>
+                </View>
+
+              )}
+              <View style={styles.bookInfo}>
+                <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
+                <View style={styles.bookFooter}>
+                  <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
+                  <Text style={styles.bookLocation}>{item.location}</Text>
+                </View>
+              </View>
+
+            </TouchableOpacity>
+          );
+        }}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
         ListFooterComponent={() => {
           if (loadingMore) {
             return (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#007AFF" />
-                <Text style={styles.footerText}>Chargement...</Text>
+                <ActivityIndicator size="small" color="#4CAF50" />
               </View>
             );
           }
-          
+
           if (!hasNextPage && books.length > 0) {
             return (
               <View style={styles.endMessage}>
-                <Text style={styles.endMessageText}>🎉 Vous avez tout vu !</Text>
+                <Ionicons name="sparkles-outline" size={22} color="#47769d" />
+                <Text style={styles.endMessageText}>Vous avez tout vu</Text>
               </View>
+
             );
           }
 
@@ -528,7 +554,7 @@ export default function BookListScreen() {
               </View>
             );
           }
-          
+
           return null;
         }}
       />
@@ -560,7 +586,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 50,
   },
   centerContainer: {
     flex: 1,
@@ -568,45 +593,98 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 15,
+
+  // Header avec logo
+  header: {
+    paddingTop: 50,
+    paddingBottom: 15,
     paddingHorizontal: 20,
+    backgroundColor: '#fff',
   },
+  logo: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  logoBook: {
+    color: '#81C784', // Vert clair
+  },
+  logoInsider: {
+    color: '#388E3C', // Vert foncé
+  },
+
+  // Barre de recherche
   searchContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 10,
-    gap: 10,
+    marginBottom: 15,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
+    fontSize: 15,
+    color: '#333',
   },
-  searchButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
+  micIcon: {
+    padding: 5,
+  },
+  micIconText: {
+    fontSize: 20,
+  },
+
+  // Filtres horizontaux 
+  topFiltersContainer: {
+    height: 50,
+    marginBottom: 15,
+  },
+  topFiltersContent: {
     paddingHorizontal: 20,
-    justifyContent: 'center',
+    gap: 10,
   },
-  searchButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  topFilterChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    marginRight: 8,
+  },
+  topFilterChipActive: {
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  topFilterText: {
     fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
+  topFilterTextActive: {
+    color: '#388E3C',
+    fontWeight: '600',
+  },
+
+  // ✅ Filtres actifs (chips)
   activeFiltersContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 15,
     alignItems: 'center',
+  },
+  activeFiltersScroll: {
+    flex: 1,
   },
   activeFilterChip: {
     flexDirection: 'row',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -615,75 +693,98 @@ const styles = StyleSheet.create({
   },
   activeFilterText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
   },
   removeFilterText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  resetButton: {
+  clearButton: {
+    marginLeft: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  clearButtonText: {
     color: '#FF3B30',
     fontSize: 14,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
-  filterButtonsContainer: {
-  paddingHorizontal: 20,
-  marginBottom: 15,
-},
-filterButton: {
-  backgroundColor: '#f5f5f5',
-  borderRadius: 20,
-  paddingVertical: 10,
-  paddingHorizontal: 16,
-  marginRight: 10,
-  marginBottom: 10,
-  minHeight: 40,
-  justifyContent: 'center',
-},
-filterButtonDisabled: {
-  backgroundColor: '#e0e0e0',
-  opacity: 0.5,
-},
-filterButtonText: {
-  fontSize: 14,
-  fontWeight: '600',
-},
 
+  // Grille de livres
+  listContent: {
+    paddingHorizontal: 15,
+    paddingBottom: 100,
+  },
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
   bookCard: {
-    padding: 15,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    marginBottom: 10,
-    marginHorizontal: 20,
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bookImage: {
+    width: '100%',
+    height: 240,
+    backgroundColor: '#f0f0f0',
+  },
+  noImagePlaceholder: {
+    width: '100%',
+    height: 240,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  iconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
+    borderColor: '#eaebf0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+
+  bookInfo: {
+    padding: 12,
   },
   bookTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  bookFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   bookAuthor: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 3,
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#000',
+    flex: 1,
+    marginRight: 8,
   },
   bookLocation: {
     fontSize: 12,
     color: '#999',
+    flexShrink: 0,
   },
-  errorText: {
-    color: 'red',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  bookImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
+
+
+  // Bouton flottant
   floatingButton: {
     position: 'absolute',
     bottom: 30,
@@ -691,7 +792,7 @@ filterButtonText: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
@@ -705,26 +806,24 @@ filterButtonText: {
     color: '#fff',
     fontWeight: 'bold',
   },
+
+  // Footer et messages
   footerLoader: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingVertical: 20,
-  },
-  footerText: {
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#666',
+    alignItems: 'center',
   },
   endMessage: {
     padding: 20,
     alignItems: 'center',
+    gap: 6,
   },
+
   endMessageText: {
     fontSize: 16,
     color: '#999',
     fontStyle: 'italic',
   },
+
   emptyContainer: {
     padding: 40,
     alignItems: 'center',
@@ -744,8 +843,14 @@ filterButtonText: {
     fontSize: 16,
     color: '#666',
   },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -755,6 +860,8 @@ filterButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
   },
+
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -793,7 +900,7 @@ filterButtonText: {
     fontSize: 16,
   },
   applyButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
