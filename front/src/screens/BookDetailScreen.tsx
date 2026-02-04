@@ -1,19 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert, } from 'react-native';
 import { useRoute, RouteProp, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Book } from '../types/Book';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { bookService } from '../services/bookService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type BookDetailRouteProp = RouteProp<{ BookDetail: { bookUuid: string } }, 'BookDetail'>;
 
@@ -22,50 +14,113 @@ export default function BookDetailScreen() {
   const navigation = useNavigation();
   const { bookUuid } = route.params;
   const { user } = useAuth();
-
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [existingExchange, setExistingExchange] = useState<any>(null);
   const [checkingExchange, setCheckingExchange] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isMyBook, setIsMyBook] = useState(false);
 
+  // Vérifie si le livre est dans les favoris
+  const checkIfFavoriteWithId = async (bookId: number) => {
+    try {
+      const response = await api.checkFavorite(bookId);
+      console.log('❤️ Réponse checkFavorite:', response); // <-- LOG
+      setIsFavorite(response.isFavorite);
+      return response.isFavorite; // <-- AJOUTE CETTE LIGNE
+    } catch (error) {
+      console.error('Erreur vérification favori:', error);
+      return false; // <-- AJOUTE CETTE LIGNE
+    }
+  };
+
+  // Vérifie si c'est mon propre livre
+  const checkIfMyBookWithUuid = async (ownerUuid: string) => {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      if (userStr) {
+        const currentUser = JSON.parse(userStr);
+        setIsMyBook(currentUser.uuid === ownerUuid);
+      }
+    } catch (error) {
+      console.error('Erreur vérification propriétaire:', error);
+    }
+  };
+  // Toggle : ajouter ou retirer des favoris
+  const handleToggleFavorite = async () => {
+    if (!book?.id) return;
+    if (isMyBook) {
+      Alert.alert('Impossible', 'Vous ne pouvez pas ajouter votre propre livre en favori');
+      return;
+    }
+
+    try {
+      const response = await api.toggleFavorite(book.id);
+
+      // Met à jour l'état local
+      setIsFavorite(response.isFavorite);
+
+      // Affiche un message de confirmation
+      Alert.alert(
+        'Succès',
+        response.message,
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('Erreur toggle favori:', error);
+      Alert.alert('Erreur', error.response?.data?.message || 'Impossible de modifier les favoris');
+    }
+  };
 
   useEffect(() => {
     loadBookDetail();
   }, []);
-  
+
   useFocusEffect(
-  React.useCallback(() => {
-    if (book?.uuid && user) {
-      checkExistingExchange(book.uuid);
-    }
-  }, [book?.uuid, user])
-);
+    React.useCallback(() => {
+      if (book?.id) {
+        checkIfFavoriteWithId(book.id);
+      }
+      if (book?.uuid && user) {
+        checkExistingExchange(book.uuid);
+      }
+    }, [book?.id, book?.uuid, user])
+  );
 
   const loadBookDetail = async () => {
     try {
       const response = await api.getBookDetail(bookUuid);
-      console.log('📚 Réponse COMPLÈTE:', JSON.stringify(response, null, 2));
-
       const bookData = response.data || response;
-      setBook(bookData);
 
-      // ✅ AJOUTE CETTE LIGNE
+      // ✅ Affiche le livre IMMÉDIATEMENT
+      setBook(bookData);
+      setLoading(false); // <-- Déplace ici pour afficher plus vite
+
+      // ✅ Lance les vérifications en arrière-plan (sans bloquer l'affichage)
+      const promises = [];
+
+      if (bookData.id) {
+        promises.push(checkIfFavoriteWithId(bookData.id));
+      }
+      if (bookData.user?.uuid) {
+        promises.push(checkIfMyBookWithUuid(bookData.user.uuid));
+      }
       if (bookData.uuid && user) {
-        checkExistingExchange(bookData.uuid);
+        promises.push(checkExistingExchange(bookData.uuid));
       }
 
-      console.log('📖 book.id après setBook:', bookData.id);
-      console.log('📖 book.uuid après setBook:', bookData.uuid);
+      // On n'attend pas, ça se chargera en arrière-plan
+      Promise.all(promises).catch(err => {
+        console.error('Erreur chargement données secondaires:', err);
+      });
 
     } catch (err: any) {
       console.error('❌ Erreur:', err.message);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
-
 
   const checkExistingExchange = async (bookUuid: string) => {
     if (!user) return;
@@ -89,8 +144,6 @@ export default function BookDetailScreen() {
       setCheckingExchange(false);
     }
   };
-
-
 
   const isOwner = user && book?.user && user.uuid === book.user.uuid;
 
@@ -173,7 +226,6 @@ export default function BookDetailScreen() {
                     if (book.uuid) {
                       checkExistingExchange(book.uuid);
                     }
-
                   }
                 }]
               );
@@ -227,8 +279,21 @@ export default function BookDetailScreen() {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Bouton favori en position absolue (en haut à droite) */}
+      {!isOwner && user && (
+        <TouchableOpacity
+          style={styles.favoriteButton}
+          onPress={handleToggleFavorite}
+        >
+          <Text style={styles.favoriteIcon}>
+            {isFavorite ? '❤️' : '🤍'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {/* Images */}
       <View style={styles.imagesContainer}>
+
         {frontImage && (
           <Image
             source={{ uri: `http://192.168.1.115:8000${frontImage.imageUrl}` }}
@@ -345,9 +410,7 @@ export default function BookDetailScreen() {
               <TouchableOpacity
                 style={styles.viewRequestButton}
                 onPress={() => navigation.navigate('DetailExchange' as never, { exchangeUuid: existingExchange.uuid } as never)}
-
               >
-
                 <Text style={styles.viewRequestButtonText}>📋 Voir ma demande</Text>
               </TouchableOpacity>
             ) : (
@@ -363,7 +426,6 @@ export default function BookDetailScreen() {
             )}
           </>
         )}
-
 
         {/* Message si non connecté */}
         {!isOwner && !user && (
@@ -548,7 +610,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
   loginPrompt: {
     backgroundColor: '#FFF3CD',
     padding: 15,
@@ -559,5 +620,25 @@ const styles = StyleSheet.create({
     color: '#856404',
     fontSize: 14,
     textAlign: 'center',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: 'white',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  favoriteIcon: {
+    fontSize: 28,
   },
 });

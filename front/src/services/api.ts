@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Book } from '../types/Book';
 import type { Conversation, Message } from '../types/Chat';
+import type { Favorite, FavoriteCheckResponse, FavoriteToggleResponse } from '../types/Favorite';
 
 const API_URL = 'http://192.168.1.115:8000/api';
 
@@ -214,6 +215,28 @@ getUnreadConversationsCount: async (): Promise<number> => {
 markConversationAsRead: async (conversationId: string): Promise<void> => {
   await apiClient.post(`/chat/conversations/${conversationId}/mark-read`);
 },
+
+  // ============================================
+  // FAVORIS
+  // ============================================
+
+  // Toggle : ajouter ou retirer un livre des favoris
+  toggleFavorite: async (bookId: number): Promise<FavoriteToggleResponse> => {
+    const response = await apiClient.patch(`/favorites/toggle/${bookId}`);
+    return response.data;
+  },
+
+  // Vérifier si un livre est dans les favoris
+  checkFavorite: async (bookId: number): Promise<FavoriteCheckResponse> => {
+    const response = await apiClient.get(`/favorites/check/${bookId}`);
+    return response.data;
+  },
+
+  // Récupérer la liste de mes favoris
+  getMyFavorites: async (): Promise<Favorite[]> => {
+    const response = await apiClient.get('/favorites');
+    return response.data.data;
+  },
 };
 
 export default apiClient;

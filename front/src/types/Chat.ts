@@ -1,5 +1,3 @@
-// Ce fichier décrit la structure de nos données de chat
-
 // Une conversation entre 2 utilisateurs
 export interface Conversation {
   id: string;                    // L'ID MongoDB de la conversation

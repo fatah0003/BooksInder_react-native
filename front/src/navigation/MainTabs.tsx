@@ -16,6 +16,7 @@ import ReceivedExchangesScreen from '../screens/ReceivedExchangesScreen';
 import DetailExchangeScreen from '../screens/DetailExchangeScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ConversationsListScreen from '../screens/ConversationsListScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
 import ChatScreen from '../screens/ChatScreen';
 
 const Tab = createBottomTabNavigator();
@@ -129,6 +130,11 @@ function ProfileStackScreen() {
         name="Notifications"
         component={NotificationsScreen}
         options={{ title: 'Notifications', headerBackTitle: 'Retour' }}
+      />
+      <ProfileStack.Screen
+        name="Favorites"
+        component={FavoritesScreen}
+        options={{ title: 'Mes favoris', headerBackTitle: 'Retour' }}
       />
     </ProfileStack.Navigator>
   );

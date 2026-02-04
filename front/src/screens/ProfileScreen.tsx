@@ -219,6 +219,14 @@ const ProfileScreen = ({ navigation }: any) => {
             <Text style={styles.exchangesButtonText}> Mes Echange</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => navigation.navigate('Favorites' as never)}
+          >
+            <Text style={styles.menuButtonText}>❤️ Mes favoris</Text>
+          </TouchableOpacity>
+
+
 
           {/* Section Mes livres */}
           <View style={styles.booksSection}>
@@ -361,7 +369,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  menuButton: {
+    backgroundColor: '#34C759',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   exchangesButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  menuButtonText : {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
