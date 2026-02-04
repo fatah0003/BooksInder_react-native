@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\FavoriteRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
@@ -20,6 +21,7 @@ class Favorite
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['favorite:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'favorites')]
@@ -30,10 +32,12 @@ class Favorite
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull(message: 'Le livre est requis')]
+    #[Groups(['favorite:read'])]
     private ?Book $book = null;
 
     #[ORM\Column]
     #[Assert\NotNull]
+    #[Groups(['favorite:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     public function __construct()

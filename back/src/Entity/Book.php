@@ -20,24 +20,24 @@ class Book
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['book:read'])]
+    #[Groups(['book:read', 'favorite:read'])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'string', length: 36, unique: true)]
-    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail', 'book:read:detail', 'exchange:detail'])]
+    #[Groups(['book:read', 'user:read', 'exchange:read', 'exchange:detail', 'book:read:detail', 'exchange:detail', 'favorite:read'])]
     private ?string $uuid = null;
 
 
     #[ORM\Column(length: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'exchange:read', 'exchange:detail', 'favorite:read'])]
     private ?string $title = null;
 
     #[ORM\Column(length: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'favorite:read'])]
     private ?string $author = null;
 
     #[ORM\Column(length: 20)]
-    #[Groups(['book:read', 'book:write', 'user:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'favorite:read'])]
     private ?string $isbn = null;
 
     #[ORM\Column(type: Types::TEXT)]

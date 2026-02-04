@@ -83,7 +83,6 @@ class FavoriteController extends AbstractController
 
         $favorites = $this->favoriteRepository->findByUser($user);
 
-
         $data = array_map(function (Favorite $favorite) {
             $book = $favorite->getBook();
             return [
@@ -91,6 +90,7 @@ class FavoriteController extends AbstractController
                 'createdAt' => $favorite->getCreatedAt()->format('c'),
                 'book' => [
                     'id' => $book->getId(),
+                    'uuid' => $book->getUuid(),
                     'title' => $book->getTitle(),
                     'author' => $book->getAuthor(),
                     'isbn' => $book->getIsbn(),
@@ -108,6 +108,7 @@ class FavoriteController extends AbstractController
             'data' => $data
         ]);
     }
+
 
     #[Route('/check/{bookId}', name: 'favorite_check', methods: ['GET'])]
     public function check(int $bookId): JsonResponse
