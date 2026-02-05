@@ -98,7 +98,7 @@ export default function LoginScreen({ navigation }: any) {
         disabled={loading}
       >
         <Text style={styles.buttonText}>
-          {loading ? 'Connexion...' : 'Sign up'}
+          {loading ? 'Connexion...' : 'Se connecter'}
         </Text>
       </TouchableOpacity>
 

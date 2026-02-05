@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, } from 'react-native';
+  View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, Modal,
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { bookService, CreateBookData, BookCategorie, BookState, ExchangeType } from '../services/bookService';
 import { BOOK_CATEGORIES, BOOK_STATES, EXCHANGE_TYPES } from '../constants/bookOptions';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AddBookScreen() {
   const navigation = useNavigation();
@@ -18,8 +21,12 @@ export default function AddBookScreen() {
   const [edition, setEdition] = useState('');
   const [location, setLocation] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<BookCategorie[]>([]);
-  const [selectedState, setSelectedState] = useState<BookState>('good');
+  const [selectedState, setSelectedState] = useState<BookState | null>(null);
   const [selectedExchangeTypes, setSelectedExchangeTypes] = useState<ExchangeType[]>([]);
+
+  // états pour les modales
+  const [showStateModal, setShowStateModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   // états pour les images
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
@@ -30,7 +37,6 @@ export default function AddBookScreen() {
 
   // sélectionner une image
   const pickImage = async (type: 'front' | 'back') => {
-    // demander la permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (permissionResult.granted === false) {
@@ -38,7 +44,6 @@ export default function AddBookScreen() {
       return;
     }
 
-    // Ouvrir le sélecteur d'images
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -55,17 +60,10 @@ export default function AddBookScreen() {
     }
   };
 
-  // catégorie
-  const toggleCategory = (category: BookCategorie) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter((c) => c !== category));
-    } else {
-      if (selectedCategories.length < 5) {
-        setSelectedCategories([...selectedCategories, category]);
-      } else {
-        Alert.alert('Limite atteinte', 'Vous ne pouvez sélectionner que 5 catégories maximum');
-      }
-    }
+  // catégorie (une seule)
+  const selectCategory = (category: BookCategorie) => {
+    setSelectedCategories([category]);
+    setShowCategoryModal(false);
   };
 
   // type d'échange
@@ -120,7 +118,12 @@ export default function AddBookScreen() {
     }
 
     if (selectedCategories.length === 0) {
-      Alert.alert('Erreur', 'Vous devez sélectionner au moins une catégorie');
+      Alert.alert('Erreur', 'Vous devez sélectionner une catégorie');
+      return false;
+    }
+
+    if (!selectedState) {
+      Alert.alert('Erreur', "Vous devez sélectionner un état du livre");
       return false;
     }
 
@@ -141,7 +144,6 @@ export default function AddBookScreen() {
     setLoading(true);
 
     try {
-      //créer le livre
       const bookData: CreateBookData = {
         title: title.trim(),
         author: author.trim(),
@@ -151,13 +153,12 @@ export default function AddBookScreen() {
         edition: edition.trim() || undefined,
         location: location.trim(),
         categorie: selectedCategories,
-        state: selectedState,
+        state: selectedState!,
         availableExchangeTypes: selectedExchangeTypes,
       };
 
       const createdBook = await bookService.create(bookData);
 
-      // upload image front et back
       if (frontImageUri) {
         await bookService.uploadCoverFront(createdBook.uuid, frontImageUri);
       }
@@ -181,8 +182,34 @@ export default function AddBookScreen() {
   };
 
   return (
+    
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Ajouter un livre</Text>
+      {/* Bouton retour */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Ionicons name="arrow-back" size={28} color="#000" />
+      </TouchableOpacity>
+
+      {/* Illustration */}
+      <View style={styles.illustrationContainer}>
+        <Image
+          source={require('../../assets/images/image-ajout-form.png')}
+          style={styles.illustration}
+          resizeMode="contain"
+        />
+      </View>
+
+      <Text style={styles.title}>Ajouter un Livre</Text>
+
+      {/* ISBN */}
+      <Text style={styles.label}>ISBN</Text>
+      <TextInput
+        style={styles.input}
+        value={isbn}
+        onChangeText={setIsbn}
+        placeholder="Ex : 1524759783"
+        placeholderTextColor="#CCC"
+        maxLength={20}
+      />
 
       {/* Titre */}
       <Text style={styles.label}>Titre *</Text>
@@ -190,7 +217,8 @@ export default function AddBookScreen() {
         style={styles.input}
         value={title}
         onChangeText={setTitle}
-        placeholder="Ex: Le Petit Prince"
+        placeholder="Ex : Récursion"
+        placeholderTextColor="#CCC"
         maxLength={100}
       />
 
@@ -200,18 +228,9 @@ export default function AddBookScreen() {
         style={styles.input}
         value={author}
         onChangeText={setAuthor}
-        placeholder="Ex: Antoine de Saint-Exupéry"
+        placeholder="Ex : BLAKE Crouche"
+        placeholderTextColor="#CCC"
         maxLength={100}
-      />
-
-      {/* ISBN */}
-      <Text style={styles.label}>ISBN *</Text>
-      <TextInput
-        style={styles.input}
-        value={isbn}
-        onChangeText={setIsbn}
-        placeholder="Ex: 978-2-07-061275-8"
-        maxLength={20}
       />
 
       {/* Description */}
@@ -221,28 +240,31 @@ export default function AddBookScreen() {
         value={description}
         onChangeText={setDescription}
         placeholder="Décrivez le livre..."
+        placeholderTextColor="#CCC"
         multiline
         numberOfLines={4}
         maxLength={5000}
       />
 
       {/* Pages */}
-      <Text style={styles.label}>Nombre de pages *</Text>
+      <Text style={styles.label}>Nb Pages *</Text>
       <TextInput
         style={styles.input}
         value={pages}
         onChangeText={setPages}
-        placeholder="Ex: 96"
+        placeholder="Ex : 296"
+        placeholderTextColor="#CCC"
         keyboardType="numeric"
       />
 
       {/* Édition */}
-      <Text style={styles.label}>Édition (optionnel)</Text>
+      <Text style={styles.label}>Édition</Text>
       <TextInput
         style={styles.input}
         value={edition}
         onChangeText={setEdition}
-        placeholder="Ex: Édition de luxe 2020"
+        placeholder="Ex : Édition de luxe 2020"
+        placeholderTextColor="#CCC"
         maxLength={40}
       />
 
@@ -252,77 +274,72 @@ export default function AddBookScreen() {
         style={styles.input}
         value={location}
         onChangeText={setLocation}
-        placeholder="Ex: Paris 75001"
+        placeholder="Ex : Lyon 69008"
+        placeholderTextColor="#CCC"
         maxLength={50}
       />
 
-      {/* État du livre */}
+      {/* État du livre - DROPDOWN */}
       <Text style={styles.label}>État du livre *</Text>
-      <View style={styles.optionsContainer}>
-        {BOOK_STATES.map((state) => (
-          <TouchableOpacity
-            key={state.value}
-            style={[styles.optionButton, selectedState === state.value && styles.optionButtonSelected]}
-            onPress={() => setSelectedState(state.value)}
-          >
-            <Text style={[styles.optionText, selectedState === state.value && styles.optionTextSelected]}>
-              {state.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <TouchableOpacity 
+        style={styles.selectButton}
+        onPress={() => setShowStateModal(true)}
+      >
+        <Text style={[styles.selectButtonText, !selectedState && styles.placeholderText]}>
+          {selectedState 
+            ? BOOK_STATES.find(s => s.value === selectedState)?.label 
+            : 'Neuf'}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color="#666" />
+      </TouchableOpacity>
 
-      {/* Catégories */}
-      <Text style={styles.label}>Catégories * (1 à 5)</Text>
-      <View style={styles.optionsContainer}>
-        {BOOK_CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat.value}
-            style={[styles.optionButton, selectedCategories.includes(cat.value) && styles.optionButtonSelected]}
-            onPress={() => toggleCategory(cat.value)}
-          >
-            <Text
-              style={[styles.optionText, selectedCategories.includes(cat.value) && styles.optionTextSelected]}
-            >
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Catégorie - DROPDOWN */}
+      <Text style={styles.label}>Catégorie</Text>
+      <TouchableOpacity 
+        style={styles.selectButton}
+        onPress={() => setShowCategoryModal(true)}
+      >
+        <Text style={[styles.selectButtonText, selectedCategories.length === 0 && styles.placeholderText]}>
+          {selectedCategories.length > 0
+            ? BOOK_CATEGORIES.find(c => c.value === selectedCategories[0])?.label
+            : 'Science-Fiction'}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color="#666" />
+      </TouchableOpacity>
 
-      {/* Types d'échange */}
-      <Text style={styles.label}>Types d'échange * (1 à 3)</Text>
-      <View style={styles.optionsContainer}>
+      {/* Types d'échange avec checkboxes */}
+      <Text style={styles.label}>Type(s) d'échange(s) souhaité(s) *</Text>
+      <View style={styles.checkboxContainer}>
         {EXCHANGE_TYPES.map((type) => (
           <TouchableOpacity
             key={type.value}
-            style={[
-              styles.optionButton,
-              selectedExchangeTypes.includes(type.value) && styles.optionButtonSelected,
-            ]}
+            style={styles.checkboxRow}
             onPress={() => toggleExchangeType(type.value)}
           >
-            <Text
-              style={[styles.optionText, selectedExchangeTypes.includes(type.value) && styles.optionTextSelected]}
-            >
-              {type.label}
-            </Text>
+            <Ionicons
+              name={selectedExchangeTypes.includes(type.value) ? 'checkbox' : 'square-outline'}
+              size={24}
+              color={selectedExchangeTypes.includes(type.value) ? '#007AFF' : '#999'}
+            />
+            <Text style={styles.checkboxLabel}>{type.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {/* Images */}
-      <Text style={styles.label}>Images (optionnel)</Text>
+      <Text style={styles.label}>Images</Text>
 
       {/* Image front */}
       <TouchableOpacity style={styles.imagePickerButton} onPress={() => pickImage('front')}>
-        <Text style={styles.imagePickerText}>📷 Image de couverture (avant)</Text>
+        <Text style={styles.imagePickerText}>Image de couverture avant</Text>
+        <Ionicons name="camera" size={24} color="#666" />
       </TouchableOpacity>
       {frontImageUri && <Image source={{ uri: frontImageUri }} style={styles.imagePreview} />}
 
       {/* Image back */}
       <TouchableOpacity style={styles.imagePickerButton} onPress={() => pickImage('back')}>
-        <Text style={styles.imagePickerText}>📷 Image de couverture (arrière)</Text>
+        <Text style={styles.imagePickerText}>Image de couverture avant</Text>
+        <Ionicons name="camera" size={24} color="#666" />
       </TouchableOpacity>
       {backImageUri && <Image source={{ uri: backImageUri }} style={styles.imagePreview} />}
 
@@ -339,7 +356,74 @@ export default function AddBookScreen() {
         )}
       </TouchableOpacity>
 
-      <View style={{ height: 40 }} />
+      <View style={{ height: 150 }} />
+
+      {/* Modal État du livre */}
+      <Modal
+        visible={showStateModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>État du livre</Text>
+            {BOOK_STATES.map((state) => (
+              <TouchableOpacity
+                key={state.value}
+                style={styles.modalOption}
+                onPress={() => {
+                  setSelectedState(state.value);
+                  setShowStateModal(false);
+                }}
+              >
+                <Text style={styles.modalOptionText}>{state.label}</Text>
+                {selectedState === state.value && (
+                  <Ionicons name="checkmark" size={24} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity 
+              style={styles.modalCloseButton}
+              onPress={() => setShowStateModal(false)}
+            >
+              <Text style={styles.modalCloseText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Catégorie */}
+      <Modal
+        visible={showCategoryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCategoryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Catégorie</Text>
+            {BOOK_CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat.value}
+                style={styles.modalOption}
+                onPress={() => selectCategory(cat.value)}
+              >
+                <Text style={styles.modalOptionText}>{cat.label}</Text>
+                {selectedCategories.includes(cat.value) && (
+                  <Ionicons name="checkmark" size={24} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity 
+              style={styles.modalCloseButton}
+              onPress={() => setShowCategoryModal(false)}
+            >
+              <Text style={styles.modalCloseText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -349,86 +433,182 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
+    paddingTop: 60,
   },
+  
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     marginBottom: 20,
     marginTop: 10,
+    color: '#000',
   },
+
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     marginTop: 15,
-    marginBottom: 5,
+    marginBottom: 8,
+    color: '#000',
   },
+
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    padding: 15,
     fontSize: 16,
+    backgroundColor: '#FAFAFA',
   },
+
   textArea: {
     height: 100,
     textAlignVertical: 'top',
+    paddingTop: 15,
   },
-  optionsContainer: {
+
+  // Dropdown/Select button
+  selectButton: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 5,
-  },
-  optionButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f5f5f5',
-  },
-  optionButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  optionText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  optionTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  imagePickerButton: {
-    backgroundColor: '#f0f0f0',
-    padding: 15,
-    borderRadius: 8,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    backgroundColor: '#FAFAFA',
+    padding: 15,
   },
-  imagePickerText: {
+  selectButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: '#000',
   },
+  placeholderText: {
+    color: '#CCC',
+  },
+
+  checkboxContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    color: '#333',
+    marginLeft: 10,
+  },
+
+  imagePickerButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 16,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+
+  imagePickerText: {
+    fontSize: 15,
+    color: '#333',
+    flex: 1,
+  },
+
   imagePreview: {
     width: '100%',
     height: 200,
-    borderRadius: 8,
+    borderRadius: 10,
     marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
+
   submitButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#4CAF50',
+    padding: 16,
+    borderRadius: 25,
     alignItems: 'center',
     marginTop: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
+
   submitButtonDisabled: {
     backgroundColor: '#ccc',
+    opacity: 0.6,
   },
+
   submitButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  illustrationContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  illustration: {
+    width: 250,
+    height: 180,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    padding: 10,
+    zIndex: 10,
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '60%',
+  },
+  modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  modalCloseButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  modalCloseText: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
 });
