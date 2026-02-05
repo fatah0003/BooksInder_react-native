@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { bookService } from '../services/bookService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 type BookDetailRouteProp = RouteProp<{ BookDetail: { bookUuid: string } }, 'BookDetail'>;
 
@@ -22,20 +23,17 @@ export default function BookDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isMyBook, setIsMyBook] = useState(false);
 
-  // Vérifie si le livre est dans les favoris
   const checkIfFavoriteWithId = async (bookId: number) => {
     try {
       const response = await api.checkFavorite(bookId);
-      console.log('❤️ Réponse checkFavorite:', response); // <-- LOG
       setIsFavorite(response.isFavorite);
-      return response.isFavorite; // <-- AJOUTE CETTE LIGNE
+      return response.isFavorite;
     } catch (error) {
       console.error('Erreur vérification favori:', error);
-      return false; // <-- AJOUTE CETTE LIGNE
+      return false;
     }
   };
 
-  // Vérifie si c'est mon propre livre
   const checkIfMyBookWithUuid = async (ownerUuid: string) => {
     try {
       const userStr = await AsyncStorage.getItem('user');
@@ -47,7 +45,7 @@ export default function BookDetailScreen() {
       console.error('Erreur vérification propriétaire:', error);
     }
   };
-  // Toggle : ajouter ou retirer des favoris
+
   const handleToggleFavorite = async () => {
     if (!book?.id) return;
     if (isMyBook) {
@@ -57,16 +55,8 @@ export default function BookDetailScreen() {
 
     try {
       const response = await api.toggleFavorite(book.id);
-
-      // Met à jour l'état local
       setIsFavorite(response.isFavorite);
-
-      // Affiche un message de confirmation
-      Alert.alert(
-        'Succès',
-        response.message,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Succès', response.message, [{ text: 'OK' }]);
     } catch (error: any) {
       console.error('Erreur toggle favori:', error);
       Alert.alert('Erreur', error.response?.data?.message || 'Impossible de modifier les favoris');
@@ -93,11 +83,9 @@ export default function BookDetailScreen() {
       const response = await api.getBookDetail(bookUuid);
       const bookData = response.data || response;
 
-      // ✅ Affiche le livre IMMÉDIATEMENT
       setBook(bookData);
-      setLoading(false); // <-- Déplace ici pour afficher plus vite
+      setLoading(false);
 
-      // ✅ Lance les vérifications en arrière-plan (sans bloquer l'affichage)
       const promises = [];
 
       if (bookData.id) {
@@ -110,13 +98,12 @@ export default function BookDetailScreen() {
         promises.push(checkExistingExchange(bookData.uuid));
       }
 
-      // On n'attend pas, ça se chargera en arrière-plan
       Promise.all(promises).catch(err => {
         console.error('Erreur chargement données secondaires:', err);
       });
 
     } catch (err: any) {
-      console.error('❌ Erreur:', err.message);
+      console.error('Erreur:', err.message);
       setError(err.message);
       setLoading(false);
     }
@@ -128,14 +115,10 @@ export default function BookDetailScreen() {
     setCheckingExchange(true);
     try {
       const response = await api.getSentExchanges(50);
-      console.log('🔍 Demandes envoyées:', JSON.stringify(response, null, 2));
-
       if (response.success) {
-        // ✅ Chercher par UUID au lieu de ID
         const existing = response.data.find(
           (ex: any) => ex.bookOne?.uuid === bookUuid && ex.status === 'pending'
         );
-        console.log('🔍 Demande existante trouvée:', existing);
         setExistingExchange(existing || null);
       }
     } catch (error) {
@@ -205,16 +188,12 @@ export default function BookDetailScreen() {
           text: 'Confirmer',
           onPress: async () => {
             try {
-              console.log('📤 Envoi demande pour book.id:', book.id);
-
               if (!book.id) {
                 Alert.alert('Erreur', 'ID du livre introuvable');
                 return;
               }
 
-              // ✅ CORRECTION : Stocker la réponse
               const response = await api.createExchange(book.id);
-              console.log('✅ Réponse:', response);
 
               Alert.alert(
                 'Demande envoyée !',
@@ -222,7 +201,6 @@ export default function BookDetailScreen() {
                 [{
                   text: 'OK',
                   onPress: () => {
-                    // ✅ AJOUTE CES LIGNES
                     if (book.uuid) {
                       checkExistingExchange(book.uuid);
                     }
@@ -231,10 +209,6 @@ export default function BookDetailScreen() {
               );
 
             } catch (error: any) {
-              console.log('❌ Erreur complète:', error);
-              console.log('❌ error.response:', error.response);
-              console.log('❌ error.message:', error.message);
-
               const errorMessage = error.response?.data?.message
                 || error.response?.data?.errors
                 || error.message
@@ -250,8 +224,8 @@ export default function BookDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
         <Text style={styles.loadingText}>Chargement...</Text>
       </View>
     );
@@ -259,7 +233,7 @@ export default function BookDetailScreen() {
 
   if (error || !book) {
     return (
-      <View style={styles.container}>
+      <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Erreur : {error || 'Livre introuvable'}</Text>
       </View>
     );
@@ -267,6 +241,14 @@ export default function BookDetailScreen() {
 
   const frontImage = book.images.find((img) => img.type === 'front');
   const backImage = book.images.find((img) => img.type === 'back');
+
+  const categoryLabels: Record<string, string> = {
+    fiction: 'Fiction',
+    science_fiction: 'Science Fiction',
+    philosophy: 'Philosophie',
+    historical: 'Histoire',
+    //  ajout autres, apres
+  };
 
   const stateLabels: Record<string, string> = {
     new: 'Neuf',
@@ -276,167 +258,157 @@ export default function BookDetailScreen() {
     acceptable: 'État acceptable',
     well_loved: 'Bien vécu',
   };
+  const exchangeTypeLabels: Record<string, string> = {
+    temporary: 'Temporaire',
+    permanent: 'Permanent',
+  };
 
   return (
     <ScrollView style={styles.container}>
-      {/* Bouton favori en position absolue (en haut à droite) */}
-      {!isOwner && user && (
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={handleToggleFavorite}
-        >
-          <Text style={styles.favoriteIcon}>
-            {isFavorite ? '❤️' : '🤍'}
-          </Text>
+      {/* Header avec titre centré */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#000" />
         </TouchableOpacity>
-      )}
+        <Text style={styles.headerTitle}>{book.title}</Text>
+      </View>
 
-      {/* Images */}
+      {/* Images centrées et réduites */}
       <View style={styles.imagesContainer}>
-
         {frontImage && (
           <Image
             source={{ uri: `http://192.168.1.115:8000${frontImage.imageUrl}` }}
-            style={styles.mainImage}
+            style={styles.bookImage}
+            resizeMode="cover"
           />
         )}
         {backImage && (
           <Image
             source={{ uri: `http://192.168.1.115:8000${backImage.imageUrl}` }}
-            style={styles.secondaryImage}
+            style={styles.bookImage}
+            resizeMode="cover"
           />
         )}
       </View>
 
       {/* Informations principales */}
       <View style={styles.infoContainer}>
-        <Text style={styles.title}>{book.title}</Text>
-        <Text style={styles.author}>par {book.author}</Text>
+        {/* Auteur + Bouton favori */}
+        <View style={styles.authorRow}>
+          <Text style={styles.author}>{book.author}</Text>
 
-        {/* Propriétaire cliquable */}
+          {!isOwner && user && (
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              onPress={handleToggleFavorite}
+            >
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={26}
+                color={isFavorite ? '#e53935' : '#999'}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Description */}
+        <Text style={styles.description}>{book.description}</Text>
+
+        {/* Propriétaire */}
         {book.user && (
-          <TouchableOpacity style={styles.ownerContainer} onPress={handleOwnerPress}>
-            <Text style={styles.ownerLabel}>Proposé par : </Text>
-            <Text style={styles.ownerName}>
-              {isOwner
-                ? 'Vous'
-                : `@${book.user.infosUser?.userName || 'Utilisateur'}`
-              }
+          <TouchableOpacity onPress={handleOwnerPress}>
+            <Text style={styles.ownerText}>
+              Proposé par{' '}
+              <Text style={styles.ownerName}>
+                {isOwner ? 'Vous' : `@${book.user.infosUser?.userName || 'UserName'}`}
+              </Text>
             </Text>
           </TouchableOpacity>
         )}
 
-        <View style={styles.separator} />
+        {/* Section Détails */}
+        <View style={styles.detailsSection}>
+          <Text style={styles.sectionTitle}>Détails</Text>
 
-        <Text style={styles.sectionTitle}>Description</Text>
-        <Text style={styles.description}>{book.description}</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>ISBN :</Text>
+            <Text style={styles.detailValue}>{book.isbn}</Text>
+          </View>
 
-        <View style={styles.separator} />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Edition</Text>
+            <Text style={styles.detailValue}>{book.edition}</Text>
+          </View>
 
-        {/* Détails techniques */}
-        <Text style={styles.sectionTitle}>Détails</Text>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>ISBN :</Text>
-          <Text style={styles.detailValue}>{book.isbn}</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Page :</Text>
+            <Text style={styles.detailValue}>{book.pages}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Etat</Text>
+            <Text style={styles.detailValue}>{stateLabels[book.state] || book.state}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Localisation</Text>
+            <Text style={styles.detailValue}>{book.location}</Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Catégorie</Text>
+            <Text style={styles.detailValue}>
+              {book.categorie
+                .map(cat => categoryLabels[cat] || cat)
+                .join(', ')}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Type d'échange accepté :</Text>
+            <Text style={styles.detailValue}>
+              {book.availableExchangeTypes
+                .map(type => exchangeTypeLabels[type] || type)
+                .join(', ')}
+            </Text>
+          </View>
+
         </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Édition :</Text>
-          <Text style={styles.detailValue}>{book.edition}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Pages :</Text>
-          <Text style={styles.detailValue}>{book.pages}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>État :</Text>
-          <Text style={styles.detailValue}>{stateLabels[book.state] || book.state}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Localisation :</Text>
-          <Text style={styles.detailValue}>📍 {book.location}</Text>
-        </View>
 
-        <View style={styles.separator} />
-
-        {/* Catégories */}
-        {book.categorie.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>Catégories</Text>
-            <View style={styles.categoriesContainer}>
-              {book.categorie.map((cat, index) => (
-                <View key={index} style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{cat}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* Types d'échange disponibles */}
-        {book.availableExchangeTypes.length > 0 && (
-          <>
-            <View style={styles.separator} />
-            <Text style={styles.sectionTitle}>Types d'échange acceptés</Text>
-            <View style={styles.categoriesContainer}>
-              {book.availableExchangeTypes.map((type, index) => (
-                <View key={index} style={styles.exchangeBadge}>
-                  <Text style={styles.exchangeText}>{type}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {/* Boutons Modifier / Supprimer (si propriétaire) */}
-        {isOwner && (
-          <>
-            <View style={styles.separator} />
-            <View style={styles.ownerActions}>
-              <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-                <Text style={styles.editButtonText}>✏️ Modifier</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-                <Text style={styles.deleteButtonText}>🗑️ Supprimer</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {/* Bouton Demander un échange OU Voir ma demande (si PAS propriétaire) */}
+        {/* Boutons d'action */}
         {!isOwner && user && book.bookStatus === 'active' && (
           <>
-            <View style={styles.separator} />
             {existingExchange ? (
               <TouchableOpacity
-                style={styles.viewRequestButton}
+                style={styles.exchangeButton}
                 onPress={() => navigation.navigate('DetailExchange' as never, { exchangeUuid: existingExchange.uuid } as never)}
               >
-                <Text style={styles.viewRequestButtonText}>📋 Voir ma demande</Text>
+                <Text style={styles.exchangeButtonText}>Voir ma demande</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
-                style={styles.requestButton}
+                style={styles.exchangeButton}
                 onPress={handleRequestExchange}
                 disabled={checkingExchange}
               >
-                <Text style={styles.requestButtonText}>
-                  {checkingExchange ? 'Vérification...' : '🔄 Demander un échange'}
+                <Text style={styles.exchangeButtonText}>
+                  {checkingExchange ? 'Vérification...' : 'Demander un échange'}
                 </Text>
               </TouchableOpacity>
             )}
           </>
         )}
 
-        {/* Message si non connecté */}
-        {!isOwner && !user && (
-          <>
-            <View style={styles.separator} />
-            <View style={styles.loginPrompt}>
-              <Text style={styles.loginPromptText}>
-                Connectez-vous pour demander ce livre
-              </Text>
-            </View>
-          </>
+        {/* Boutons propriétaire */}
+        {isOwner && (
+          <View style={styles.ownerActions}>
+            <TouchableOpacity style={styles.modifyButton} onPress={handleEdit}>
+              <Text style={styles.modifyButtonText}>Modifier</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+              <Text style={styles.deleteButtonText}>Supprimer</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </ScrollView>
@@ -448,104 +420,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  imagesContainer: {
-    backgroundColor: '#f5f5f5',
-  },
-  mainImage: {
-    width: '100%',
-    height: 400,
-    resizeMode: 'contain',
-  },
-  secondaryImage: {
-    width: '100%',
-    height: 300,
-    resizeMode: 'contain',
-    marginTop: 10,
-  },
-  infoContainer: {
-    padding: 20,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  author: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 10,
-  },
-  ownerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f8ff',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  ownerLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  ownerName: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  detailLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    width: 120,
-    color: '#666',
-  },
-  detailValue: {
-    fontSize: 16,
+  centerContainer: {
     flex: 1,
-    color: '#333',
-  },
-  categoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryBadge: {
-    backgroundColor: '#e3f2fd',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  categoryText: {
-    color: '#1976d2',
-    fontSize: 14,
-  },
-  exchangeBadge: {
-    backgroundColor: '#e8f5e9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  exchangeText: {
-    color: '#388e3c',
-    fontSize: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   loadingText: {
     marginTop: 10,
@@ -557,19 +436,156 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 50,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    top: 50,
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+
+  // Images (réduites et centrées)
+  imagesContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 50,
+    paddingVertical: 20,
+  },
+  bookImage: {
+    width: 260,
+    height: 340,
+    borderRadius: 15,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+
+  // Info container
+  infoContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+
+  // Auteur + Favori
+  authorRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  author: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#000',
+    flex: 1,
+  },
+  favoriteButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+    marginLeft: 10,
+  },
+
+  // Description
+  description: {
+    fontSize: 14,
+    color: '#999',
+    lineHeight: 20,
+    marginBottom: 15,
+  },
+
+  // Propriétaire
+  ownerText: {
+    fontSize: 14,
+    color: '#000',
+    marginBottom: 20,
+  },
+  ownerName: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+
+  // Section Détails
+  detailsSection: {
+    marginBottom: 25,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 15,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#000',
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#000',
+    textAlign: 'right',
+    flex: 1,
+  },
+
+  // Bouton d'échange
+  exchangeButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 15,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  exchangeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  // Boutons propriétaire
   ownerActions: {
     flexDirection: 'row',
     gap: 10,
     marginTop: 10,
   },
-  editButton: {
+  modifyButton: {
     flex: 1,
     backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
+    paddingVertical: 15,
+    borderRadius: 25,
     alignItems: 'center',
   },
-  editButtonText: {
+  modifyButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
@@ -577,68 +593,13 @@ const styles = StyleSheet.create({
   deleteButton: {
     flex: 1,
     backgroundColor: '#FF3B30',
-    padding: 15,
-    borderRadius: 8,
+    paddingVertical: 15,
+    borderRadius: 25,
     alignItems: 'center',
   },
   deleteButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  requestButton: {
-    backgroundColor: '#34C759',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  requestButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  viewRequestButton: {
-    backgroundColor: '#FF9500',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  viewRequestButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  loginPrompt: {
-    backgroundColor: '#FFF3CD',
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  loginPromptText: {
-    color: '#856404',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 10,
-    backgroundColor: 'white',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  favoriteIcon: {
-    fontSize: 28,
   },
 });
