@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen({ navigation }: any) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const { login } = useAuth();
 
@@ -106,36 +109,76 @@ export default function RegisterScreen({ navigation }: any) {
         }
     };
 
-
     return (
-        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.container}>
+            {/* Bouton retour */}
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <Ionicons name="arrow-back" size={28} color="#000" />
+            </TouchableOpacity>
+
+            {/* Titre */}
             <Text style={styles.title}>Créer un compte</Text>
 
+            {/* Sous-titre */}
+            <Text style={styles.subtitle}>Pret à te lancer dans une quête de de savoir ?</Text>
+
+            {/* Champ Email */}
             <TextInput
                 style={styles.input}
                 placeholder="Email"
+                placeholderTextColor="#999"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
             />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Mot de passe"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-            />
+            {/* Champ Mot de passe */}
+            <View style={styles.passwordContainer}>
+                <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Mot de passe"
+                    placeholderTextColor="#999"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                >
+                    <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={22}
+                        color="#999"
+                    />
+                </TouchableOpacity>
+            </View>
 
-            <TextInput
-                style={styles.input}
-                placeholder="Confirmer le mot de passe"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-            />
+            {/* Champ Confirmer mot de passe */}
+            <View style={styles.passwordContainer}>
+                <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Confirmer le mot de passe"
+                    placeholderTextColor="#999"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                />
+                <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                    <Ionicons
+                        name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={22}
+                        color="#999"
+                    />
+                </TouchableOpacity>
+            </View>
 
+
+            {/* Bouton S'inscrire */}
             <TouchableOpacity
                 style={[styles.button, loading && styles.buttonDisabled]}
                 onPress={handleRegister}
@@ -148,53 +191,131 @@ export default function RegisterScreen({ navigation }: any) {
                 )}
             </TouchableOpacity>
 
+            {/* Lien "Déjà un compte" */}
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.link}>Déjà un compte ? Se connecter</Text>
+                <Text style={styles.link}>Déjà un compte ? se connecter</Text>
             </TouchableOpacity>
-        </View>
+
+            {/* Conditions d'utilisation */}
+            <View style={styles.termsContainer}>
+                <Text style={styles.termsText}>
+                    En cliquant sur S'inscrire, vous{'\n'}
+                    acceptez nos <Text style={styles.termsLink}>Conditions d'utilisation</Text>{'\n'}
+                    et notre <Text style={styles.termsLink}>Politique de confidentialité</Text>
+                </Text>
+            </View>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        justifyContent: 'center',
-        padding: 20,
+        flexGrow: 1,
         backgroundColor: '#fff',
+        paddingHorizontal: 30,
+        paddingTop: 100,
+        paddingBottom: 30,
     },
+
+
+    // Bouton retour
+    backButton: {
+        position: 'absolute',
+        top: 50,
+        left: 20,
+        padding: 10,
+        zIndex: 10,
+    },
+
+    // Titre
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        marginBottom: 30,
-        textAlign: 'center',
+        marginBottom: 15,
+        color: '#000',
     },
+
+    // Sous-titre
+    subtitle: {
+        fontSize: 16,
+        color: '#999',
+        marginBottom: 35,
+    },
+
+    // Champ de texte simple
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#E0E0E0',
+        borderRadius: 10,
         padding: 15,
-        borderRadius: 8,
-        marginBottom: 15,
+        fontSize: 16,
+        backgroundColor: '#FAFAFA',
+        marginBottom: 25,
+    },
+
+    // Champ mot de passe avec icône
+    passwordContainer: {
+        marginBottom: 25,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 10,
+        backgroundColor: '#FAFAFA',
+        paddingHorizontal: 15,
+    },
+    passwordInput: {
+        flex: 1,
+        padding: 15,
         fontSize: 16,
     },
+    eyeIcon: {
+        padding: 5,
+    },
+
+    // Bouton principal
     button: {
-        backgroundColor: '#007AFF',
-        padding: 15,
-        borderRadius: 8,
+        backgroundColor: '#4CAF50',
+        padding: 16,
+        borderRadius: 25,
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 15,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     buttonDisabled: {
         opacity: 0.6,
     },
     buttonText: {
         color: '#fff',
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
+
+    // Lien
     link: {
         color: '#007AFF',
+        fontSize: 14,
         textAlign: 'center',
+        marginBottom: 50,
+    },
+
+    // Conditions d'utilisation
+    termsContainer: {
         marginTop: 20,
-        fontSize: 16,
+    },
+    termsText: {
+        fontSize: 12,
+        color: '#999',
+        textAlign: 'center',
+        lineHeight: 18,
+    },
+    termsLink: {
+        color: '#007AFF',
+        textDecorationLine: 'underline',
     },
 });

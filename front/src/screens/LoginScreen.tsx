@@ -24,28 +24,33 @@ export default function LoginScreen({ navigation }: any) {
       Alert.alert('Succès', 'Connexion réussie !');
       navigation.navigate('Profil');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur de connexion');
+      //Traduction des erreurs
+      let errorMessage = err.response?.data?.message || err.message || 'Erreur de connexion';
+
+      // Traduction en français
+      if (errorMessage === 'Invalid credentials.') {
+        errorMessage = 'Email ou mot de passe incorrect';
+      } else if (errorMessage.includes('credentials')) {
+        errorMessage = 'Identifiants invalides';
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Illustration */}
       <View style={styles.illustrationContainer}>
-  <Image
-    source={require('../../assets/images/connexion-image.png')}
-    style={styles.illustration}
-    resizeMode="contain"
-  />
-</View>
-
-
-      {/* Texte d'accroche */}
-      <Text style={styles.catchPhrase}>
-        Prêt à te lancer dans une quête{'\n'}d'inspiration et de savoir ?
-      </Text>
+        <Image
+          source={require('../../assets/images/connexion-image.png')}
+          style={styles.illustration}
+          resizeMode="contain"
+        />
+      </View>
 
       {/* Titre */}
       <Text style={styles.title}>Connexion</Text>
@@ -156,16 +161,6 @@ const styles = StyleSheet.create({
   illustrationEmoji: {
     fontSize: 80,
   },
-
-  // Texte d'accroche
-  catchPhrase: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-
   // Titre
   title: {
     fontSize: 24,
