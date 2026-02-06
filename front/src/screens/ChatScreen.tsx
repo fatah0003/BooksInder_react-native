@@ -9,47 +9,54 @@ import {
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
+    Image,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { api } from '../services/api';
 import type { Message } from '../types/Chat';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+
 
 export default function ChatScreen() {
-    // Récupération des paramètres passés lors de la navigation
     const route = useRoute();
+    const navigation = useNavigation();
     const { conversationId, otherUserUuid } = route.params as {
         conversationId: string;
         otherUserUuid: string;
     };
 
-    // États
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [currentUserUuid, setCurrentUserUuid] = useState<string>('');
+    const [otherUserName, setOtherUserName] = useState<string>('');
+    const [otherUserAvatar, setOtherUserAvatar] = useState<string | null>(null);
 
-    // Référence pour la FlatList (pour scroller)
     const flatListRef = useRef<FlatList>(null);
 
-    // Fonction qui charge les messages depuis le backend
+    const loadOtherUserInfo = async () => {
+        try {
+            const profile = await api.getUserPublicProfile(otherUserUuid);
+            setOtherUserName(profile.user?.infosUser?.userName || 'Utilisateur');
+            setOtherUserAvatar(profile.user?.infosUser?.avatar || null);
+        } catch (error) {
+            console.error('Erreur chargement profil:', error);
+            setOtherUserName('Utilisateur');
+        }
+    };
+
     const loadMessages = async () => {
         try {
-            // 1. Récupère l'UUID de l'utilisateur connecté
             const userStr = await AsyncStorage.getItem('user');
             if (userStr) {
                 const user = JSON.parse(userStr);
                 setCurrentUserUuid(user.uuid);
             }
 
-            // 2. Récupère les messages de cette conversation
             const data = await api.getConversationMessages(conversationId);
-
-            // 3. Met à jour l'état avec les messages
             setMessages(data);
-
-            // 4. Marque tous les messages comme lus
             await api.markConversationAsRead(conversationId);
 
         } catch (error) {
@@ -59,40 +66,29 @@ export default function ChatScreen() {
         }
     };
 
-    // Charge les messages au démarrage
     useEffect(() => {
+        loadOtherUserInfo();
         loadMessages();
     }, []);
 
-    // Polling : recharge les messages toutes les 5 secondes
     useEffect(() => {
         const interval = setInterval(() => {
             loadMessages();
-        }, 5000); // 5000 ms = 5 secondes
+        }, 5000);
 
-        // Nettoyage : arrête le polling quand on quitte l'écran
         return () => clearInterval(interval);
     }, [conversationId]);
 
-    // Fonction pour envoyer un nouveau message
     const handleSendMessage = async () => {
-        // Vérifie que le message n'est pas vide
         const trimmedMessage = newMessage.trim();
         if (trimmedMessage === '') return;
 
         try {
             setSending(true);
-
-            // Envoie le message à l'API
             await api.sendMessage(conversationId, trimmedMessage);
-
-            // Vide le champ de saisie
             setNewMessage('');
-
-            // Recharge les messages immédiatement pour voir le nouveau
             await loadMessages();
 
-            // Scroll automatiquement vers le bas pour voir le nouveau message
             setTimeout(() => {
                 flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
@@ -103,56 +99,109 @@ export default function ChatScreen() {
         }
     };
 
-    // Fonction pour afficher UN message
-    const renderMessage = ({ item }: { item: Message }) => {
-        // Est-ce que c'est MON message ou celui de l'autre ?
+    const renderMessage = ({ item, index }: { item: Message; index: number }) => {
         const isMyMessage = item.senderUuid === currentUserUuid;
+        const date = new Date(item.createdAt);
+        const dateTimeString = `${date.toLocaleDateString('fr-FR', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        })} ${date.toLocaleTimeString('fr-FR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        })}`;
+
+        const isLastInGroup = 
+            index === messages.length - 1 ||
+            new Date(messages[index + 1].createdAt).toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }) !== date.toLocaleTimeString('fr-FR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
 
         return (
-            <View
-                style={[
-                    styles.messageContainer,
-                    isMyMessage ? styles.myMessage : styles.otherMessage,
-                ]}
-            >
+            <View>
                 <View
                     style={[
-                        styles.messageBubble,
-                        isMyMessage ? styles.myBubble : styles.otherBubble,
+                        styles.messageRow,
+                        isMyMessage ? styles.myMessageRow : styles.otherMessageRow,
                     ]}
                 >
-                    <Text style={styles.messageText}>{item.content}</Text>
-                    <Text style={styles.messageTime}>
-                        {new Date(item.createdAt).toLocaleTimeString('fr-FR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                        })}
-                    </Text>
+                    {/* Avatar pour les messages de l'autre utilisateur */}
+                    {!isMyMessage && (
+                        <View style={styles.avatarContainer}>
+                            {otherUserAvatar ? (
+                                <Image 
+                                    source={{ uri: otherUserAvatar }} 
+                                    style={styles.avatar}
+                                />
+                            ) : (
+                                <View style={styles.avatarPlaceholder}>
+                                    <Ionicons name="person" size={20} color="#666666" />
+
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {/* Bulle de message */}
+                    <View
+                        style={[
+                            styles.messageBubble,
+                            isMyMessage ? styles.myBubble : styles.otherBubble,
+                        ]}
+                    >
+                        <Text 
+                            style={[
+                                styles.messageText,
+                                isMyMessage ? styles.myMessageText : styles.otherMessageText
+                            ]}
+                        >
+                            {item.content}
+                        </Text>
+                    </View>
                 </View>
+
+                {/* Timestamp SOUS le dernier message du groupe */}
+                {isLastInGroup && (
+                    <View style={[
+                        styles.timestampContainer,
+                        isMyMessage ? styles.timestampRight : styles.timestampLeft
+                    ]}>
+                        <Text style={styles.timestamp}>{dateTimeString}</Text>
+                    </View>
+                )}
             </View>
         );
     };
-    // Si les messages sont en train de charger
+
     if (loading) {
         return (
             <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#5B93FF" />
             </View>
         );
     }
 
-    // Affichage principal
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={90}
         >
+            {/* Header personnalisé */}
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>{otherUserName}</Text>
+                <View style={styles.headerPlaceholder} />
+            </View>
+
             {/* Liste des messages */}
             <FlatList
                 ref={flatListRef}
                 data={messages}
-                renderItem={renderMessage}
+                renderItem={({ item, index }) => renderMessage({ item, index })}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.messagesList}
                 onContentSizeChange={() => {
@@ -160,28 +209,38 @@ export default function ChatScreen() {
                 }}
             />
 
-            {/* Zone de saisie en bas */}
+            {/* Zone de saisie */}
             <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    value={newMessage}
-                    onChangeText={setNewMessage}
-                    placeholder="Écrivez votre message..."
-                    multiline
-                    maxLength={500}
-                />
-                <TouchableOpacity
-                    style={[
-                        styles.sendButton,
-                        (newMessage.trim() === '' || sending) && styles.sendButtonDisabled,
-                    ]}
-                    onPress={handleSendMessage}
-                    disabled={newMessage.trim() === '' || sending}
-                >
-                    <Text style={styles.sendButtonText}>
-                        {sending ? '...' : '📤'}
-                    </Text>
-                </TouchableOpacity>
+                <View style={styles.inputWrapper}>
+                    <TextInput
+                        style={styles.input}
+                        value={newMessage}
+                        onChangeText={setNewMessage}
+                        placeholder="Message..."
+                        placeholderTextColor="#999999"
+                        multiline
+                        maxLength={500}
+                    />
+                    <TouchableOpacity
+                        style={styles.emojiButton}
+                        onPress={() => {}}
+                    >
+                        <Ionicons name="happy-outline" size={24} color="#999999" />
+                    </TouchableOpacity>
+                </View>
+                {newMessage.trim() !== '' && (
+                    <TouchableOpacity
+                        style={styles.sendButton}
+                        onPress={handleSendMessage}
+                        disabled={sending}
+                    >
+                        {sending ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                            <Ionicons name="send" size={16} color="#FFFFFF" />
+                        )}
+                    </TouchableOpacity>
+                )}
             </View>
         </KeyboardAvoidingView>
     );
@@ -190,80 +249,146 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#FFFFFF',
     },
     centered: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    headerTitle: {
+        fontSize: 17,
+        fontWeight: '600',
+        color: '#000000',
+    },
+    headerPlaceholder: {
+        width: 40,
     },
     messagesList: {
-        padding: 10,
+        padding: 16,
+        paddingBottom: 8,
     },
-    messageContainer: {
-        marginBottom: 10,
-        flexDirection: 'row',
+    timestampContainer: {
+        marginTop: 4,
+        marginBottom: 12,
     },
-    myMessage: {
-        justifyContent: 'flex-end',
+    timestampLeft: {
+        alignItems: 'flex-start',
+        marginLeft: 40, 
     },
-    otherMessage: {
-        justifyContent: 'flex-start',
-    },
-    messageBubble: {
-        maxWidth: '75%',
-        padding: 12,
-        borderRadius: 15,
-    },
-    myBubble: {
-        backgroundColor: '#007AFF',
-        alignSelf: 'flex-end',
-    },
-    otherBubble: {
-        backgroundColor: '#E5E5EA',
-        alignSelf: 'flex-start',
-    },
-    messageText: {
-        fontSize: 16,
-        color: '#000',
-    },
-    messageTime: {
-        fontSize: 11,
-        color: '#666',
-        marginTop: 5,
-        textAlign: 'right',
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        padding: 10,
-        backgroundColor: 'white',
-        borderTopWidth: 1,
-        borderTopColor: '#ddd',
+    timestampRight: {
         alignItems: 'flex-end',
     },
-    input: {
-        flex: 1,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 20,
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        marginRight: 10,
-        maxHeight: 100,
-        fontSize: 16,
+    timestamp: {
+        fontSize: 11,
+        color: '#999999',
     },
-    sendButton: {
-        backgroundColor: '#007AFF',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+    messageRow: {
+        flexDirection: 'row',
+        marginBottom: 2,
+        alignItems: 'flex-end',
+    },
+    myMessageRow: {
+        justifyContent: 'flex-end',
+    },
+    otherMessageRow: {
+        justifyContent: 'flex-start',
+    },
+    avatarContainer: {
+        marginRight: 8,
+        marginBottom: 4,
+    },
+    avatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+    },
+    avatarPlaceholder: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    sendButtonDisabled: {
-        backgroundColor: '#ccc',
+    avatarText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666666',
     },
-    sendButtonText: {
-        fontSize: 20,
+    messageBubble: {
+        maxWidth: '70%',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 18,
+    },
+    myBubble: {
+        backgroundColor: '#5B93FF',
+        borderBottomRightRadius: 4,
+    },
+    otherBubble: {
+        backgroundColor: '#F0F0F0',
+        borderBottomLeftRadius: 4,
+    },
+    messageText: {
+        fontSize: 15,
+        lineHeight: 20,
+    },
+    myMessageText: {
+        color: '#FFFFFF',
+    },
+    otherMessageText: {
+        color: '#000000',
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+        alignItems: 'flex-end',
+    },
+    inputWrapper: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 20,
+        paddingRight: 4,
+        marginRight: 8,
+    },
+    input: {
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        maxHeight: 100,
+        fontSize: 15,
+        color: '#000000',
+    },
+    emojiButton: {
+        padding: 8,
+        marginRight: 4,
+    },
+    sendButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#5B93FF',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
-

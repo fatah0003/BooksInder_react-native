@@ -7,131 +7,146 @@ import {
     StyleSheet,
     ActivityIndicator,
     RefreshControl,
+    Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import type { Conversation } from '../types/Chat';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function ConversationsListScreen() {
 
+export default function ConversationsListScreen() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [currentUserUuid, setCurrentUserUuid] = useState<string>('');
     const [userNames, setUserNames] = useState<Record<string, string>>({});
-
+    const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
 
     const navigation = useNavigation();
 
-    // Fonction qui récupère les conversations depuis le backend
-const loadConversations = async () => {
-    try {
-        // 1. Récupère l'UUID de l'utilisateur connecté depuis AsyncStorage
-        const userStr = await AsyncStorage.getItem('user');
-        if (userStr) {
-            const user = JSON.parse(userStr);
-            setCurrentUserUuid(user.uuid);
-        }
-
-        // 2. Appelle l'API pour récupérer les conversations
-        const data = await api.getConversations();
-
-        // 3. Met à jour l'état avec les conversations reçues
-        setConversations(data);
-
-        // 4. Charge le nom de chaque utilisateur
-        data.forEach(conv => {
-            const otherUserUuid = conv.participants.find(uuid => uuid !== currentUserUuid);
-            if (otherUserUuid) {
-                loadUserName(otherUserUuid);
+    const loadConversations = async () => {
+        try {
+            const userStr = await AsyncStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                setCurrentUserUuid(user.uuid);
             }
-        });
 
-    } catch (error) {
-        console.error('Erreur chargement conversations:', error);
-    } finally {
-        // 5. Arrête le spinner de chargement dans tous les cas
-        setLoading(false);
-        setRefreshing(false);
-    }
-};
+            const data = await api.getConversations();
+            setConversations(data);
 
-    // Charge le nom d'un utilisateur et le stocke
-        const loadUserName = async (userUuid: string) => {
-    if (userNames[userUuid]) return;
-    
-    try {
-      const profile = await api.getUserPublicProfile(userUuid);
+            // Charger les infos de chaque utilisateur
+            data.forEach(conv => {
+                const otherUserUuid = conv.participants.find(uuid => uuid !== currentUserUuid);
+                if (otherUserUuid) {
+                    loadUserInfo(otherUserUuid);
+                }
+            });
+
+        } catch (error) {
+            console.error('Erreur chargement conversations:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const loadUserInfo = async (userUuid: string) => {
+        if (userNames[userUuid]) return;
+        
+        try {
+            const profile = await api.getUserPublicProfile(userUuid);
             
-      setUserNames(prev => ({
-        ...prev,
-        [userUuid]: profile.user?.infosUser?.userName || 'Utilisateur inconnu'
-      }));
-    } catch (error) {
-      console.error('Erreur chargement nom utilisateur:', error);
-      setUserNames(prev => ({
-        ...prev,
-        [userUuid]: 'Utilisateur'
-      }));
-    }
-  };
+            setUserNames(prev => ({
+                ...prev,
+                [userUuid]: profile.user?.infosUser?.userName || 'Utilisateur inconnu'
+            }));
 
+            setUserAvatars(prev => ({
+                ...prev,
+                [userUuid]: profile.user?.infosUser?.avatar || null
+            }));
+        } catch (error) {
+            console.error('Erreur chargement utilisateur:', error);
+            setUserNames(prev => ({
+                ...prev,
+                [userUuid]: 'Utilisateur'
+            }));
+        }
+    };
 
-
-
-    // Charge les conversations au premier affichage de l'écran
     useEffect(() => {
         loadConversations();
     }, []);
 
-    // Recharge les conversations à chaque fois qu'on revient sur cet écran
     useFocusEffect(
         React.useCallback(() => {
             loadConversations();
         }, [])
     );
 
-    // Fonction pour trouver l'autre utilisateur dans la conversation
     const getOtherParticipantUuid = (conversation: Conversation): string => {
-        // conversation.participants contient 2 UUID : moi + l'autre personne
-        // On retourne celui qui n'est PAS moi
         return conversation.participants.find(uuid => uuid !== currentUserUuid) || '';
     };
 
-    // Fonction pour afficher une conversation dans la liste
+    const formatDate = (dateString: string): string => {
+        const date = new Date(dateString);
+        const today = new Date();
+        
+        // Si c'est aujourd'hui, afficher l'heure
+        if (date.toDateString() === today.toDateString()) {
+            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Sinon afficher la date courte
+        return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
     const renderConversation = ({ item }: { item: Conversation }) => {
         const otherUserUuid = getOtherParticipantUuid(item);
+        const userName = userNames[otherUserUuid] || 'Chargement...';
+        const avatar = userAvatars[otherUserUuid];
 
         return (
             <TouchableOpacity
                 style={styles.conversationItem}
                 onPress={() => {
-                    // Quand on clique, on navigue vers l'écran de chat
                     navigation.navigate('ChatScreen' as never, {
                         conversationId: item.id,
                         otherUserUuid: otherUserUuid,
                     } as never);
                 }}
             >
-                <View style={styles.conversationContent}>
-                    {/* Nom de l'utilisateur */}
-                    <Text style={styles.userName}>
-                        {userNames[otherUserUuid] || 'Chargement...'}
-                    </Text>
+                {/* Avatar */}
+                <View style={styles.avatarContainer}>
+                    {avatar ? (
+                        <Image 
+                            source={{ uri: avatar }} 
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={styles.avatarPlaceholder}>
+                            <Ionicons name="person" size={28} color="#666666" />
+                        </View>
+                    )}
+                </View>
 
-
-                    {/* Dernier message */}
+                {/* Contenu */}
+                <View style={styles.contentContainer}>
+                    <View style={styles.topRow}>
+                        <Text style={styles.userName}>{userName}</Text>
+                        {item.lastMessageAt && (
+                            <Text style={styles.date}>
+                                {formatDate(item.lastMessageAt)}
+                            </Text>
+                        )}
+                    </View>
+                    
                     {item.lastMessage && (
                         <Text style={styles.lastMessage} numberOfLines={1}>
                             {item.lastMessage}
-                        </Text>
-                    )}
-
-                    {/* Date du dernier message */}
-                    {item.lastMessageAt && (
-                        <Text style={styles.date}>
-                            {new Date(item.lastMessageAt).toLocaleDateString('fr-FR')}
                         </Text>
                     )}
                 </View>
@@ -139,16 +154,14 @@ const loadConversations = async () => {
         );
     };
 
-    // Si les données sont en train de charger, affiche un spinner
     if (loading) {
         return (
             <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#5B93FF" />
             </View>
         );
     }
 
-    // Affichage principal de l'écran
     return (
         <View style={styles.container}>
             <FlatList
@@ -156,6 +169,7 @@ const loadConversations = async () => {
                 renderItem={renderConversation}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -181,47 +195,73 @@ const loadConversations = async () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#FFFFFF',
     },
     centered: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#FFFFFF',
     },
     listContainer: {
-        padding: 10,
+        flexGrow: 1,
     },
     conversationItem: {
-        backgroundColor: 'white',
-        padding: 15,
-        marginBottom: 10,
-        borderRadius: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: '#FFFFFF',
     },
-    conversationContent: {
-        gap: 5,
+    avatarContainer: {
+        marginRight: 12,
+    },
+    avatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+    },
+    avatarPlaceholder: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#E0E0E0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    contentContainer: {
+        flex: 1,
+    },
+    topRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
     },
     userName: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: '600',
+        color: '#000000',
+    },
+    date: {
+        fontSize: 13,
+        color: '#999999',
     },
     lastMessage: {
         fontSize: 14,
-        color: '#666',
+        color: '#999999',
+        marginTop: 2,
     },
-    date: {
-        fontSize: 12,
-        color: '#999',
-        marginTop: 5,
+    separator: {
+        height: 1,
+        backgroundColor: '#F0F0F0',
+        marginLeft: 78, // Aligné avec le texte (16px padding + 50px avatar + 12px margin)
     },
     emptyContainer: {
+        flex: 1,
         padding: 40,
         alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyText: {
         fontSize: 18,
@@ -235,4 +275,3 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
-
