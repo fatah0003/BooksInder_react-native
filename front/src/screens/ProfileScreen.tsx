@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, Alert, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../services/api';
 import { Book } from '../types/Book';
+import { Ionicons } from '@expo/vector-icons';
 
 const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
@@ -12,29 +13,24 @@ const ProfileScreen = ({ navigation }: any) => {
   const [loadingBooks, setLoadingBooks] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Charger mes livres à chaque fois que l'écran est affiché
   useFocusEffect(
     React.useCallback(() => {
       loadMyBooks();
       loadUnreadCount();
     }, [])
   );
-  // Polling automatique toutes les 30 secondes
+
   useEffect(() => {
     if (!user) return;
 
-    // Charger immédiatement
     loadUnreadCount();
 
-    // Puis toutes les 30 secondes
     const interval = setInterval(() => {
       loadUnreadCount();
-    }, 30000); // 30 secondes = 30000 ms
+    }, 30000);
 
-    // Nettoyer l'intervalle quand le composant est démonté
     return () => clearInterval(interval);
   }, [user]);
-
 
   const loadMyBooks = async () => {
     try {
@@ -58,7 +54,6 @@ const ProfileScreen = ({ navigation }: any) => {
       console.error('Erreur chargement compteur:', error);
     }
   };
-
 
   const handleLogout = () => {
     Alert.alert(
@@ -115,118 +110,140 @@ const ProfileScreen = ({ navigation }: any) => {
   };
 
   const handleBookPress = (bookUuid: string) => {
-    // naviguer vers la Stack Books, puis vers BookDetail
     navigation.getParent()?.navigate('Livres', {
       screen: 'BookDetail',
       params: { bookUuid }
     });
   };
 
-
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Mon Profil</Text>
-      {user && (
-        <TouchableOpacity
-          style={styles.notificationsButton}
-          onPress={() => navigation.navigate('Notifications')}
-        >
-          <View style={styles.notificationButtonContent}>
-            <Text style={styles.notificationsButtonText}>🔔 Notifications</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Header avec boutons retour et notification */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#000" />
+        </TouchableOpacity>
+        {user && (
+          <TouchableOpacity
+            style={styles.notificationIcon}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <Ionicons name="notifications-outline" size={28} color="#000" />
             {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
               </View>
             )}
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+      </View>
 
-      )}
+      {/* Illustration */}
+      <View style={styles.illustrationContainer}>
+        <Image
+          source={require('../../assets/images/profil-user.png')}
+          style={styles.illustration}
+          resizeMode="contain"
+        />
+      </View>
 
       {user && (
         <>
-          {/* Email (toujours présent) */}
-          <View style={styles.infoContainer}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{user.email}</Text>
+          {/* Infos utilisateur */}
+          <View style={styles.userInfoSection}>
+            <View style={styles.mainRow}>
+              {/* Colonne gauche : Infos */}
+              <View style={styles.leftColumn}>
+                {/* Email */}
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIconContainer}>
+                    <Ionicons name="mail-outline" size={20} color="#666" />
+                  </View>
+                  <Text style={styles.infoText}>{user.email}</Text>
+                </View>
+
+                {/* Localisation */}
+                {user.infosUser && (
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoIconContainer}>
+                      <Ionicons name="location-outline" size={20} color="#666" />
+                    </View>
+                    <Text style={styles.infoText}>{user.infosUser.city || 'Lyon, France'}</Text>
+                  </View>
+                )}
+
+                {/* Téléphone */}
+                {user.infosUser && (
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoIconContainer}>
+                      <Ionicons name="call-outline" size={20} color="#666" />
+                    </View>
+                    <Text style={styles.infoText}>{user.infosUser.phoneNumber || '0662xxxxxx'}</Text>
+                  </View>
+                )}
+
+                {/* Date de naissance */}
+                {user.infosUser && (
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoIconContainer}>
+                      <Ionicons name="calendar-outline" size={20} color="#666" />
+                    </View>
+                    <Text style={styles.infoText}>
+                      {user.infosUser.birthDate ? formatDate(user.infosUser.birthDate) : '03/03/2033'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Colonne droite : me + Bio */}
+              <View style={styles.rightColumn}>
+                <View style={styles.meRow}>
+                  <Ionicons name="person-circle" size={20} color="#666" style={styles.meIcon} />
+                  <Text style={styles.bioLabel}>Biographie</Text>
+                </View>
+
+                {user.infosUser?.bio ? (
+                  <Text style={styles.bioContent} numberOfLines={6}>
+                    {user.infosUser.bio}
+                  </Text>
+                ) : (
+                  <Text style={styles.bioPlaceholder}>
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec.
+                  </Text>
+                )}
+              </View>
+            </View>
           </View>
 
-          {/* Si infosUser existe, afficher les infos */}
-          {user.infosUser ? (
-            <>
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Nom d'utilisateur</Text>
-                <Text style={styles.value}>{user.infosUser.userName}</Text>
-              </View>
 
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Téléphone</Text>
-                <Text style={styles.value}>{user.infosUser.phoneNumber}</Text>
-              </View>
 
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Ville</Text>
-                <Text style={styles.value}>{user.infosUser.city}</Text>
-              </View>
-
-              <View style={styles.infoContainer}>
-                <Text style={styles.label}>Date de naissance</Text>
-                <Text style={styles.value}>{formatDate(user.infosUser.birthDate)}</Text>
-              </View>
-
-              {user.infosUser.bio && (
-                <View style={styles.infoContainer}>
-                  <Text style={styles.label}>Biographie</Text>
-                  <Text style={styles.value}>{user.infosUser.bio}</Text>
-                </View>
-              )}
-
-              {/* Bouton Modifier */}
-              <View style={styles.buttonContainer}>
-                <Button
-                  title="Modifier mon profil"
-                  onPress={() => navigation.navigate('EditProfile')}
-                  color="#007AFF"
-                />
-              </View>
-            </>
-          ) : (
-            /* Si pas d'infosUser, afficher le message et bouton */
-            <>
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  Votre profil est incomplet
-                </Text>
-                <Text style={styles.emptySubtext}>
-                  Complétez vos informations pour profiter pleinement de Booksinder
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.completeButton}
-                onPress={() => navigation.navigate('EditProfile')}
-              >
-                <Text style={styles.completeButtonText}>Compléter mon profil</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {/* Bouton Demandes reçues */}
+          {/* Bouton Modifier mon Profil */}
           <TouchableOpacity
-            style={styles.exchangesButton}
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            <Text style={styles.primaryButtonText}>Modifier mon Profil</Text>
+          </TouchableOpacity>
+
+          {/* Bouton Historique des échanges */}
+          <TouchableOpacity
+            style={styles.secondaryButton}
             onPress={() => navigation.navigate('ReceivedExchanges')}
           >
-            <Text style={styles.exchangesButtonText}> Mes Echange</Text>
+            <Text style={styles.secondaryButtonText}>Historique des échanges</Text>
           </TouchableOpacity>
 
+          {/* Bouton Mes Favoris */}
           <TouchableOpacity
-            style={styles.menuButton}
+            style={styles.secondaryButton}
             onPress={() => navigation.navigate('Favorites' as never)}
           >
-            <Text style={styles.menuButtonText}>❤️ Mes favoris</Text>
+            <Text style={styles.secondaryButtonText}>Mes Favoris</Text>
           </TouchableOpacity>
-
-
 
           {/* Section Mes livres */}
           <View style={styles.booksSection}>
@@ -234,7 +251,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
             {loadingBooks ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#007AFF" />
+                <ActivityIndicator size="small" color="#4CAF50" />
                 <Text style={styles.loadingText}>Chargement...</Text>
               </View>
             ) : myBooks.length === 0 ? (
@@ -242,55 +259,57 @@ const ProfileScreen = ({ navigation }: any) => {
                 <Text style={styles.noBooksText}>Vous n'avez pas encore ajouté de livres</Text>
               </View>
             ) : (
-              myBooks.map((book) => {
-                const frontImage = book.images.find((img) => img.type === 'front');
-                const imageToShow = frontImage || book.images[0];
+              <View style={styles.booksGrid}>
+                {myBooks.map((book) => {
+                  const frontImage = book.images.find((img) => img.type === 'front');
+                  const imageToShow = frontImage || book.images[0];
 
-                return (
-                  <TouchableOpacity
-                    key={book.uuid}
-                    style={styles.bookCard}
-                    onPress={() => handleBookPress(book.uuid)}
-                  >
-                    {imageToShow ? (
-                      <Image
-                        source={{ uri: `http://192.168.1.115:8000${imageToShow.imageUrl}` }}
-                        style={styles.bookImage}
-                      />
-                    ) : (
-                      <View style={styles.noImagePlaceholder}>
-                        <Text style={styles.noImageText}>📚</Text>
-                      </View>
-                    )}
-                    <View style={styles.bookInfo}>
+                  return (
+                    <TouchableOpacity
+                      key={book.uuid}
+                      style={styles.bookCard}
+                      onPress={() => handleBookPress(book.uuid)}
+                    >
+                      {imageToShow ? (
+                        <Image
+                          source={{ uri: `http://192.168.1.115:8000${imageToShow.imageUrl}` }}
+                          style={styles.bookImage}
+                        />
+                      ) : (
+                        <View style={styles.noImagePlaceholder}>
+                          <View style={styles.iconCircle}>
+                            <Ionicons name="book-outline" size={56} color="#47769d" />
+                          </View>
+                        </View>
+                      )}
                       <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-                      <Text style={styles.bookAuthor} numberOfLines={1}>par {book.author}</Text>
-                      <Text style={styles.bookLocation}>📍 {book.location}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
+                      <Text style={styles.bookAuthor} numberOfLines={1}>{book.author}</Text>
+                      <Text style={styles.bookLocation}>{book.location}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             )}
           </View>
+          <View style={styles.divider} />
 
-          {/* Bouton Déconnexion (toujours présent) */}
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Se déconnecter"
-              onPress={handleLogout}
-              color="#d9534f"
-            />
-          </View>
-          {/* Bouton Suppression (toujours présent) */}
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Supprimer mon compte"
-              onPress={handleDeleteAccount}
-              color="#8B0000"
-            />
-          </View>
+          {/* Bouton Se déconnecter */}
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutButtonText}>Se déconnecter</Text>
+          </TouchableOpacity>
 
-          <View style={{ height: 40 }} />
+          {/* Bouton Supprimer mon compte */}
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDeleteAccount}
+          >
+            <Text style={styles.deleteButtonText}>Supprimer mon compte</Text>
+          </TouchableOpacity>
+
+          <View style={{ height: 50 }} />
         </>
       )}
     </ScrollView>
@@ -300,106 +319,268 @@ const ProfileScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  infoContainer: {
     backgroundColor: '#fff',
-    padding: 20,
+  },
+  scrollContent: {
+    paddingBottom: 50,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 10,
+  },
+  backButton: {
+    padding: 5,
+  },
+  notificationIcon: {
+    padding: 5,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#FF3B30',
     borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+
+  // Illustration
+  illustrationContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  illustration: {
+    width: 200,
+    height: 150,
+  },
+
+  // Avatar
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#E8EAF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Infos utilisateur
+  userInfoSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    padding: 15,
+    backgroundColor: '#FAFAFA',
+  },
+
+  // Row principale avec 2 colonnes
+  mainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  // Colonne gauche (infos)
+  leftColumn: {
+    flex: 1,
+    paddingRight: 15,
+  },
+
+  // Colonne droite (bio)
+  rightColumn: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingLeft: 15,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E0E0E0',
+  },
+
+  // Me + Biographie
+  meText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 8,
+  },
+  bioLabel: {
+    fontSize: 12,
+    fontWeight: 'normal',
+    color: '#666',
+  },
+  bioContent: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+  },
+  bioPlaceholder: {
+    fontSize: 12,
+    color: '#999',
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+
+  // Row pour chaque info
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+
+
+  // Row pour email + me/bio
+  emailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  emailLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+  },
+
+  // Container me + bio à droite
+  meAndBioContainer: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  // Row normale pour les autres infos
+  
+  meTag: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  meTagText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  bioText: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 2,
+  },
+  bioContainer: {
+    marginLeft: 44,
+    marginTop: -10,
+    marginBottom: 15,
+  },
+  bioTextContent: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+
+  // Boutons
+  primaryButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 16,
+    borderRadius: 25,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowRadius: 4,
     elevation: 3,
   },
-  label: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-    fontWeight: '600',
-  },
-  value: {
+  primaryButtonText: {
+    color: '#fff',
     fontSize: 16,
-    color: '#333',
-  },
-  emptyContainer: {
-    backgroundColor: '#fff',
-    padding: 30,
-    borderRadius: 10,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-    textAlign: 'center',
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  completeButton: {
+  secondaryButton: {
     backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 25,
+    marginHorizontal: 20,
+    marginBottom: 12,
     alignItems: 'center',
-    marginBottom: 20,
   },
-  completeButtonText: {
+  secondaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  exchangesButton: {
-    backgroundColor: '#34C759',
-    padding: 15,
-    borderRadius: 10,
+  logoutButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    borderRadius: 25,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 12,
     alignItems: 'center',
-    marginBottom: 20,
   },
-  menuButton: {
-    backgroundColor: '#34C759',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  exchangesButtonText: {
+  logoutButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  menuButtonText : {
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+    paddingVertical: 16,
+    borderRadius: 25,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
 
-  buttonContainer: {
-    marginTop: 10,
-    marginBottom: 10,
-  },
+  // Section livres
   booksSection: {
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: 30,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 15,
-    color: '#333',
+    color: '#000',
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -413,7 +594,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   emptyBooksContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
     padding: 30,
     borderRadius: 10,
     alignItems: 'center',
@@ -423,11 +604,18 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
-  bookCard: {
+
+  // Grille de livres (2 colonnes)
+  booksGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  bookCard: {
+    width: '48%',
+    marginBottom: 20,
     backgroundColor: '#fff',
     borderRadius: 10,
-    marginBottom: 15,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -436,69 +624,67 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   bookImage: {
-    width: 100,
-    height: 140,
+    width: '100%',
+    height: 200,
   },
   noImagePlaceholder: {
-    width: 100,
-    height: 140,
-    backgroundColor: '#e0e0e0',
+    width: '100%',
+    height: 200,
+    backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   noImageText: {
-    fontSize: 40,
-  },
-  bookInfo: {
-    flex: 1,
-    padding: 15,
-    justifyContent: 'center',
+    fontSize: 50,
   },
   bookTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
+    paddingHorizontal: 10,
+    paddingTop: 10,
   },
   bookAuthor: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 3,
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#000',
+    paddingHorizontal: 10,
+    paddingTop: 5,
   },
   bookLocation: {
     fontSize: 12,
     color: '#999',
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+    paddingTop: 5,
   },
-  notificationsButton: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  notificationButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  notificationsButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  badge: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+  iconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
+    borderColor: '#eaebf0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    backgroundColor: '#fff',
   },
-  badgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+  // Me row avec icône
+meRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 8,
+},
+meIcon: {
+  marginRight: 6,
+},
+// Trait séparateur
+divider: {
+  height: 2,
+  backgroundColor: '#E0E0E0',
+  marginHorizontal: 20,
+  marginVertical: 20,
+},
+
 
 });
 

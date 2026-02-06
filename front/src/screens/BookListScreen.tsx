@@ -477,7 +477,7 @@ export default function BookListScreen() {
             )}
           </ScrollView>
 
-          {/* ✅ Bouton Effacer */}
+          {/* Bouton Effacer */}
           <TouchableOpacity onPress={resetAllFilters} style={styles.clearButton}>
             <Text style={styles.clearButtonText}>Effacer</Text>
           </TouchableOpacity>
