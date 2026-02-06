@@ -348,8 +348,8 @@ export default function BookListScreen() {
       {/* Header avec logo */}
       <View style={styles.header}>
         <Text style={styles.logo}>
-          <Text style={styles.logoBook}>Book</Text>
-          <Text style={styles.logoInsider}>Insider</Text>
+          <Text style={styles.logoBook}>Books</Text>
+          <Text style={styles.logoInsider}>Inder</Text>
         </Text>
       </View>
 

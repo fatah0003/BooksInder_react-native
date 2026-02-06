@@ -154,51 +154,58 @@ export default function EditBookScreen() {
 
   // Soumettre le formulaire
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) return;
 
+  try {
     setLoading(true);
+    const data = {
+      userName: userName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      city: city.trim(),
+      birthDate,
+      bio: bio.trim() || undefined,
+    };
 
-    try {
-      // Mettre à jour les infos du livre
-      const bookData: UpdateBookData = {
-        title: title.trim(),
-        author: author.trim(),
-        isbn: isbn.trim(),
-        description: description.trim(),
-        pages: parseInt(pages, 10),
-        edition: edition.trim() || undefined,
-        location: location.trim(),
-        categorie: selectedCategories,
-        state: selectedState,
-        availableExchangeTypes: selectedExchangeTypes,
-      };
-
-      await bookService.update(bookUuid, bookData);
-
-      // Upload nouvelle image front et back
-      if (frontImageUri) {
-        await bookService.uploadCoverFront(bookUuid, frontImageUri);
-      }
-
-      if (backImageUri) {
-        await bookService.uploadCoverBack(bookUuid, backImageUri);
-      }
-
-      Alert.alert('Succès', 'Le livre a été modifié avec succès !', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
-    } catch (error: any) {
-      console.error('Erreur lors de la modification du livre:', error);
-      Alert.alert('Erreur', error.response?.data?.message || 'Une erreur est survenue');
-    } finally {
-      setLoading(false);
+    if (user?.infosUser?.id) {
+      // ✅ Modification existante
+      await infosUserService.update(user.infosUser.id, data);
+      Alert.alert('Succès', 'Profil modifié avec succès !');
+    } else {
+      // ✅ Première création du profil
+      await infosUserService.create(data);
+      Alert.alert(
+        'Bienvenue !', 
+        'Votre profil a été créé avec succès. Vous pouvez maintenant découvrir les livres disponibles.',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              // Redirection vers l'onglet Livres après création
+              navigation.navigate('Livres');
+            }
+          }
+        ]
+      );
     }
-  };
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await refreshUser();
+    
+    // ✅ Ne pas utiliser goBack() lors de la première création
+    if (user?.infosUser?.id) {
+      navigation.goBack();
+    }
+    
+  } catch (error: any) {
+    Alert.alert(
+      'Erreur',
+      error.response?.data?.message || 'Une erreur est survenue'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <ScrollView style={styles.container}>

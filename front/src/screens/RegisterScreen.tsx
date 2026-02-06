@@ -78,9 +78,17 @@ export default function RegisterScreen({ navigation }: any) {
             const data = await response.json();
 
             if (response.ok) {
-                Alert.alert('Succès', 'Inscription réussie ! Connexion en cours...');
-                // Après l'inscription, on connecte directement l'utilisateur
-                await login(email, password);
+      // CONNEXION AUTOMATIQUE
+      await login(email, password);
+      
+      // ATTENDRE UN PEU QUE LE STATE SE METTE À JOUR
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // REDIRECTION VERS EDITPROFILE
+      navigation.navigate('Profil', {
+        screen: 'EditProfile'
+      });
+
             } else {
                 console.log('Erreur backend:', data);
 
