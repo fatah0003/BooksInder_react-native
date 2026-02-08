@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert, 
+  ScrollView, 
+  KeyboardAvoidingView, 
+  Platform 
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { passwordResetService } from '../services/passwordResetService';
 
 export default function ResetPasswordScreen({ navigation, route }: any) {
@@ -8,6 +19,8 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,7 +44,6 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
   };
 
   const handleSubmit = async () => {
-    // Validations
     if (!token.trim()) {
       setError('Veuillez entrer le code reçu par email');
       return;
@@ -84,116 +96,267 @@ export default function ResetPasswordScreen({ navigation, route }: any) {
     }
   };
 
+  const handleResendCode = async () => {
+    try {
+      await passwordResetService.requestReset({ email });
+      Alert.alert('Code renvoyé', 'Un nouveau code a été envoyé à votre email');
+    } catch (err: any) {
+      Alert.alert('Erreur', 'Impossible de renvoyer le code');
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Réinitialiser le mot de passe</Text>
-      <Text style={styles.subtitle}>
-        Un code à 6 chiffres a été envoyé à {email}
-      </Text>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {/* Header avec bouton retour */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="chevron-back" size={28} color="#000000" />
+        </TouchableOpacity>
+      </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <TextInput
-        style={styles.input}
-        placeholder="Code à 6 chiffres"
-        value={token}
-        onChangeText={setToken}
-        keyboardType="number-pad"
-        maxLength={6}
-        editable={!loading}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Nouveau mot de passe"
-        value={newPassword}
-        onChangeText={setNewPassword}
-        secureTextEntry
-        editable={!loading}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Confirmer le mot de passe"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        editable={!loading}
-      />
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleSubmit}
-        disabled={loading}
+      {/* Contenu scrollable */}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.buttonText}>
-          {loading ? 'Réinitialisation...' : 'Réinitialiser'}
+        <Text style={styles.title}>Réinitialiser le mot de passe</Text>
+        
+        <Text style={styles.subtitle}>
+          Entrez le code à 6 chiffres envoyé à{'\n'}
+          <Text style={styles.emailText}>{email}</Text>
         </Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.link}>Renvoyer un code</Text>
-      </TouchableOpacity>
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={20} color="#FF3B30" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Retour à la connexion</Text>
-      </TouchableOpacity>
-    </View>
+        {/* Input Code */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Code à 6 chiffres"
+            placeholderTextColor="#999999"
+            value={token}
+            onChangeText={(text) => {
+              setToken(text);
+              setError('');
+            }}
+            keyboardType="number-pad"
+            maxLength={6}
+            editable={!loading}
+          />
+        </View>
+
+        {/* Input Nouveau mot de passe */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Noveau mot de passe"
+            placeholderTextColor="#999999"
+            value={newPassword}
+            onChangeText={(text) => {
+              setNewPassword(text);
+              setError('');
+            }}
+            secureTextEntry={!showPassword}
+            editable={!loading}
+          />
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Ionicons 
+              name={showPassword ? "eye-off-outline" : "eye-outline"} 
+              size={24} 
+              color="#999999" 
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Input Confirmer mot de passe */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Confirmer le mot de passe"
+            placeholderTextColor="#999999"
+            value={confirmPassword}
+            onChangeText={(text) => {
+              setConfirmPassword(text);
+              setError('');
+            }}
+            secureTextEntry={!showConfirmPassword}
+            editable={!loading}
+          />
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          >
+            <Ionicons 
+              name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
+              size={24} 
+              color="#999999" 
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bouton Continue */}
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.submitButtonText}>
+            {loading ? 'Réinitialisation...' : 'Continue'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Liens */}
+        <View style={styles.linksContainer}>
+          <Text style={styles.resendText}>Si vous n'avaez pas reçu le code? </Text>
+          <TouchableOpacity onPress={handleResendCode}>
+            <Text style={styles.resendLink}>Renvoyer</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.backToLoginLink}>Retour à la connexion</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
     justifyContent: 'center',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40, // ✅ Espace en bas pour les petits écrans
+  },
   title: {
-    fontSize: 28,
+    fontSize: 24, // ✅ Réduit de 28 à 24 pour petits écrans
     fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 12, // ✅ Réduit de 16 à 12
     textAlign: 'center',
-    marginBottom: 10,
-    color: '#333',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 14, // ✅ Réduit de 15 à 14
+    color: '#999999',
+    marginBottom: 24, // ✅ Réduit de 32 à 24
+    lineHeight: 20, // ✅ Réduit de 22 à 20
     textAlign: 'center',
-    marginBottom: 30,
-    color: '#666',
+  },
+  emailText: {
+    color: '#5B93FF',
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFE5E5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16, // ✅ Réduit de 20 à 16
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 13, // ✅ Réduit de 14 à 13
+    marginLeft: 8,
+    flex: 1,
+  },
+  inputContainer: {
+    marginBottom: 12, // ✅ Réduit de 16 à 12
+    position: 'relative',
   },
   input: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14, // ✅ Réduit de 16 à 14
+    fontSize: 15, // ✅ Réduit de 16 à 15
+    color: '#000000',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
-    fontSize: 16,
+    borderColor: '#E0E0E0',
+    paddingRight: 50,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
+  eyeButton: {
+    position: 'absolute',
+    right: 12,
+    top: 14, // ✅ Ajusté pour le nouveau padding
+    padding: 4,
+  },
+  submitButton: {
+    backgroundColor: '#5FBF5F',
+    borderRadius: 12,
+    paddingVertical: 14, // ✅ Réduit de 16 à 14
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 16, // ✅ Réduit de 24 à 16
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
+  submitButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+    opacity: 0.6,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16, // ✅ Réduit de 17 à 16
+    fontWeight: '600',
   },
-  link: {
-    color: '#007AFF',
-    fontSize: 14,
+  linksContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16, // ✅ Réduit de 24 à 16
+    flexWrap: 'wrap', // ✅ Permet le retour à la ligne si nécessaire
+  },
+  resendText: {
+    fontSize: 13, // ✅ Réduit de 14 à 13
+    color: '#999999',
+  },
+  resendLink: {
+    fontSize: 13, // ✅ Réduit de 14 à 13
+    color: '#5FBF5F',
+    fontWeight: '600',
+  },
+  backToLoginLink: {
+    fontSize: 14, // ✅ Réduit de 15 à 14
+    color: '#5B93FF',
     textAlign: 'center',
-    marginTop: 15,
-  },
-  error: {
-    color: 'red',
-    marginBottom: 10,
-    textAlign: 'center',
+    marginTop: 12, // ✅ Réduit de 16 à 12
+    fontWeight: '500',
   },
 });

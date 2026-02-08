@@ -140,7 +140,6 @@ export default function ChatScreen() {
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
                                     <Ionicons name="person" size={20} color="#666666" />
-
                                 </View>
                             )}
                         </View>

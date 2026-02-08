@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // ✅ Filtres actifs (chips)
+  // Filtres actifs (chips)
   activeFiltersContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,

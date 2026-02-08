@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
@@ -15,12 +16,10 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Charger au démarrage
   useEffect(() => {
     loadNotifications();
   }, []);
 
-  // Recharger à chaque fois qu'on revient sur l'écran
   useFocusEffect(
     React.useCallback(() => {
       loadNotifications();
@@ -43,22 +42,18 @@ export default function NotificationsScreen() {
 
   const handleNotificationPress = async (item: any) => {
     try {
-      // Marquer comme lue si pas encore lu
       if (!item.isRead) {
         await api.markNotificationAsRead(item.id);
       }
 
-      // Navigation selon le type
       if (item.type === 'exchange_request' ||
         item.type === 'exchange_accepted' ||
         item.type === 'exchange_rejected' ||
         item.type === 'exchange_cancelled') {
-        // Aller vers l'onglet Profil > Mes demandes
         navigation.getParent()?.navigate('Profil', {
           screen: 'ReceivedExchanges',
         });
       } else if (item.type === 'message_received') {
-        // Extraire les données de la notification
         const notifData = typeof item.data === 'string'
           ? JSON.parse(item.data)
           : item.data;
@@ -66,7 +61,6 @@ export default function NotificationsScreen() {
         const conversationId = notifData.conversationId;
         const senderUuid = notifData.senderUuid;
 
-        // Naviguer vers l'onglet Chat > ChatScreen
         navigation.getParent()?.navigate('Chat', {
           screen: 'ChatScreen',
           params: {
@@ -76,8 +70,6 @@ export default function NotificationsScreen() {
         });
       }
 
-
-      // Recharger pour mettre à jour le statut
       loadNotifications();
     } catch (error: any) {
       console.error('Erreur:', error);
@@ -97,52 +89,85 @@ export default function NotificationsScreen() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'exchange_request': return '📬';
-      case 'exchange_accepted': return '✅';
-      case 'exchange_rejected': return '❌';
-      case 'exchange_cancelled': return '🚫';
-      case 'message_received': return '💬';
-      default: return '🔔';
+      case 'exchange_request': return 'mail-outline';
+      case 'exchange_accepted': return 'checkmark-circle-outline';
+      case 'exchange_rejected': return 'close-circle-outline';
+      case 'exchange_cancelled': return 'ban-outline';
+      case 'message_received': return 'chatbubble-outline';
+      default: return 'notifications-outline';
     }
   };
 
-  const renderItem = ({ item }: any) => (
-    <TouchableOpacity
-      style={[styles.card, !item.isRead && styles.cardUnread]}
-      onPress={() => handleNotificationPress(item)}
-    >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{getNotificationIcon(item.type)}</Text>
-      </View>
-      <View style={styles.content}>
-        <Text style={[styles.title, !item.isRead && styles.titleUnread]}>
-          {item.title}
-        </Text>
-        <Text style={styles.date}>
-          {new Date(item.createdAt).toLocaleDateString('fr-FR', {
-            day: '2-digit',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      </View>
-      {!item.isRead && <View style={styles.unreadBadge} />}
-    </TouchableOpacity>
-  );
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'exchange_request': return '#5B93FF';
+      case 'exchange_accepted': return '#34C759';
+      case 'exchange_rejected': return '#FF3B30';
+      case 'exchange_cancelled': return '#FF9500';
+      case 'message_received': return '#5B93FF';
+      default: return '#999999';
+    }
+  };
+
+  const renderItem = ({ item }: any) => {
+    const iconName = getNotificationIcon(item.type);
+    const iconColor = getNotificationColor(item.type);
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, !item.isRead && styles.cardUnread]}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.7}
+      >
+        {/* Icône */}
+        <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
+          <Ionicons name={iconName as any} size={24} color={iconColor} />
+        </View>
+
+        {/* Contenu */}
+        <View style={styles.content}>
+          <Text style={[styles.title, !item.isRead && styles.titleUnread]}>
+            {item.title}
+          </Text>
+          <View style={styles.dateRow}>
+            <Ionicons name="time-outline" size={14} color="#999999" />
+            <Text style={styles.date}>
+              {new Date(item.createdAt).toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
+        </View>
+
+        {/* Badge non lu */}
+        {!item.isRead && <View style={styles.unreadBadge} />}
+
+        {/* Chevron */}
+        <Ionicons name="chevron-forward" size={20} color="#CCCCCC" style={styles.chevron} />
+      </TouchableOpacity>
+    );
+  };
 
   const hasUnread = notifications.some((n: any) => !n.isRead);
 
   return (
     <View style={styles.container}>
-      {/* Bouton marquer tout comme lu */}
-      {hasUnread && (
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
-            <Text style={styles.markAllButtonText}>✓ Tout marquer comme lu</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Notifications</Text>
+        {hasUnread && (
+          <TouchableOpacity 
+            style={styles.markAllButton} 
+            onPress={handleMarkAllAsRead}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.markAllButtonText}>Marquer comme lues</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Liste */}
       <FlatList
@@ -151,10 +176,14 @@ export default function NotificationsScreen() {
         keyExtractor={(item) => item.id.toString()}
         refreshing={loading}
         onRefresh={loadNotifications}
+        contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🔔</Text>
+            <Ionicons name="notifications-off-outline" size={80} color="#CCCCCC" />
             <Text style={styles.emptyText}>Aucune notification</Text>
+            <Text style={styles.emptySubtext}>
+              Vous serez notifié des nouveaux messages et échanges
+            </Text>
           </View>
         }
       />
@@ -165,83 +194,118 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F0F0F0',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000000',
   },
   markAllButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: '#56b739',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#56b739',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   markAllButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  listContainer: {
+    padding: 16,
+    flexGrow: 1,
   },
   card: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 15,
-    marginHorizontal: 10,
-    marginVertical: 5,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
     alignItems: 'center',
   },
   cardUnread: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: '#F0F8FF',
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#5B93FF',
   },
   iconContainer: {
-    marginRight: 15,
-  },
-  icon: {
-    fontSize: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   content: {
     flex: 1,
   },
   title: {
     fontSize: 15,
-    color: '#333',
-    marginBottom: 5,
+    color: '#333333',
+    marginBottom: 6,
+    lineHeight: 20,
   },
   titleUnread: {
-    fontWeight: 'bold',
-    color: '#000',
+    fontWeight: '600',
+    color: '#000000',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   date: {
     fontSize: 12,
-    color: '#999',
+    color: '#999999',
+    marginLeft: 4,
   },
   unreadBadge: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#007AFF',
-    marginLeft: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#5B93FF',
+    marginRight: 8,
+  },
+  chevron: {
+    marginLeft: 4,
   },
   emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 100,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 10,
+    paddingVertical: 80,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666666',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999999',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });

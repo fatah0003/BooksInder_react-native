@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,7 +14,6 @@ export default function ReceivedExchangesScreen({ navigation }: any) {
   const [historyExchanges, setHistoryExchanges] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Charger les demandes au démarrage et quand on change d'onglet
   useEffect(() => {
     loadExchanges();
   }, [activeTab]);
@@ -29,12 +29,10 @@ export default function ReceivedExchangesScreen({ navigation }: any) {
       } else if (activeTab === 'sent') {
         const response = await api.getSentExchanges(20);
         if (response.success) {
-          // Filtrer seulement les pending
           const pendingOnly = response.data.filter((ex: any) => ex.status === 'pending');
           setSentExchanges(pendingOnly);
         }
       } else {
-        // Historique : tous les échanges terminés
         const response = await api.getCompletedExchanges(20);
         if (response.success) {
           setHistoryExchanges(response.data);
@@ -48,60 +46,86 @@ export default function ReceivedExchangesScreen({ navigation }: any) {
   };
 
   const renderItem = ({ item }: any) => {
-  const isHistory = activeTab === 'history';
-  const isReceived = activeTab === 'received';
-  
-  // Pour l'historique, déterminer si je suis le requester ou le receiver
-  const isRequester = item.userRequester?.uuid === user?.uuid;
-  
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('DetailExchange', { exchangeUuid: item.uuid })}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.title}>
-          {isHistory && !isRequester 
-            ? (item.bookTwo?.title || 'Livre inconnu')  // Si je suis receiver, afficher bookTwo
-            : (item.bookOne?.title || 'Livre inconnu')  // Sinon bookOne
-          }
-        </Text>
-        <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
-          <Text style={styles.statusText}>
-            {item.status === 'pending' ? 'En attente' : 
-             item.status === 'validated' ? 'Accepté' : 'Refusé'}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.subtitle}>
-        {isHistory 
-          ? isRequester
-            ? `Échangé avec : ${item.userReceiver?.infosUser?.userName || 'Utilisateur'}`
-            : `Échangé avec : ${item.userRequester?.infosUser?.userName || 'Utilisateur'}`
-          : isReceived 
-            ? `Demandé par : ${item.userRequester?.infosUser?.userName || 'Utilisateur'}`
-            : `Demandé à : ${item.userReceiver?.infosUser?.userName || 'Utilisateur'}`
-        }
-      </Text>
-      <Text style={styles.date}>
-        {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-      </Text>
-      
-      {/* Si validé, afficher le livre échangé */}
-      {item.status === 'validated' && item.bookTwo && (
-        <View style={styles.exchangeInfo}>
-          <Text style={styles.exchangeText}>
-            ↔️ {isRequester 
-              ? `Reçu : ${item.bookTwo.title}`
-              : `Donné : ${item.bookOne.title}`
-            }
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-};
+    const isHistory = activeTab === 'history';
+    const isReceived = activeTab === 'received';
+    const isRequester = item.userRequester?.uuid === user?.uuid;
+    
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('DetailExchange', { exchangeUuid: item.uuid })}
+      >
+        <View style={styles.cardContent}>
+          {/* Icône de statut */}
+          <View style={[styles.statusIcon, styles[`statusIcon_${item.status}`]]}>
+            <Ionicons 
+              name={
+                item.status === 'pending' ? 'time-outline' : 
+                item.status === 'validated' ? 'checkmark-circle' : 'close-circle'
+              } 
+              size={24} 
+              color="#FFFFFF" 
+            />
+          </View>
 
+          {/* Contenu */}
+          <View style={styles.cardInfo}>
+            <Text style={styles.bookTitle} numberOfLines={1}>
+              {isHistory && !isRequester 
+                ? (item.bookTwo?.title || 'Livre inconnu')
+                : (item.bookOne?.title || 'Livre inconnu')
+              }
+            </Text>
+            
+            <View style={styles.userRow}>
+              <Ionicons name="person-outline" size={14} color="#999999" />
+              <Text style={styles.userName}>
+                {isHistory 
+                  ? isRequester
+                    ? item.userReceiver?.infosUser?.userName || 'Utilisateur'
+                    : item.userRequester?.infosUser?.userName || 'Utilisateur'
+                  : isReceived 
+                    ? item.userRequester?.infosUser?.userName || 'Utilisateur'
+                    : item.userReceiver?.infosUser?.userName || 'Utilisateur'
+                }
+              </Text>
+            </View>
+
+            <View style={styles.dateRow}>
+              <Ionicons name="calendar-outline" size={14} color="#999999" />
+              <Text style={styles.date}>
+                {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+              </Text>
+            </View>
+
+            {/* Badge de statut */}
+            <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
+              <Text style={styles.statusText}>
+                {item.status === 'pending' ? 'En attente' : 
+                 item.status === 'validated' ? 'Accepté' : 'Refusé'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Flèche */}
+          <Ionicons name="chevron-forward" size={24} color="#CCCCCC" />
+        </View>
+
+        {/* Info échange validé */}
+        {item.status === 'validated' && item.bookTwo && (
+          <View style={styles.exchangeInfo}>
+            <Ionicons name="swap-horizontal" size={16} color="#34C759" />
+            <Text style={styles.exchangeText}>
+              {isRequester 
+                ? `Reçu : ${item.bookTwo.title}`
+                : `Donné : ${item.bookOne.title}`
+              }
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const getCurrentData = () => {
     if (activeTab === 'received') return receivedExchanges;
@@ -117,6 +141,11 @@ export default function ReceivedExchangesScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      {/* Header avec titre */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Mes échanges</Text>
+      </View>
+
       {/* Onglets */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
@@ -152,8 +181,12 @@ export default function ReceivedExchangesScreen({ navigation }: any) {
         keyExtractor={(item) => item.uuid}
         refreshing={loading}
         onRefresh={loadExchanges}
+        contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="book-outline" size={64} color="#CCCCCC" />
+            <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
+          </View>
         }
       />
     </View>
@@ -163,58 +196,113 @@ export default function ReceivedExchangesScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000000',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
   },
   tab: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: 16,
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#007AFF',
+    borderBottomColor: '#5B93FF',
   },
   tabText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#999999',
+    fontWeight: '500',
   },
   tabTextActive: {
-    color: '#007AFF',
-    fontWeight: 'bold',
+    color: '#5B93FF',
+    fontWeight: '600',
+  },
+  listContainer: {
+    padding: 16,
+    flexGrow: 1,
   },
   card: {
-    backgroundColor: 'white',
-    padding: 15,
-    marginHorizontal: 10,
-    marginVertical: 5,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
-  cardHeader: {
+  cardContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  statusIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  statusIcon_pending: {
+    backgroundColor: '#FFA500',
+  },
+  statusIcon_validated: {
+    backgroundColor: '#34C759',
+  },
+  statusIcon_rejected: {
+    backgroundColor: '#FF3B30',
+  },
+  cardInfo: {
     flex: 1,
   },
+  bookTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 6,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  userName: {
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 6,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  date: {
+    fontSize: 12,
+    color: '#999999',
+    marginLeft: 6,
+  },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 12,
   },
   status_pending: {
@@ -227,33 +315,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8D7DA',
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  date: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#000000',
   },
   exchangeInfo: {
-    marginTop: 10,
-    paddingTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#F0F0F0',
   },
   exchangeText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#34C759',
-    fontWeight: '600',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
   },
   emptyText: {
-    textAlign: 'center',
-    marginTop: 50,
     fontSize: 16,
-    color: '#999',
+    color: '#999999',
+    marginTop: 16,
+    textAlign: 'center',
   },
 });

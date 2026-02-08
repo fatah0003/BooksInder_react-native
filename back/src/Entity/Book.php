@@ -33,7 +33,7 @@ class Book
     private ?string $title = null;
 
     #[ORM\Column(length: 100)]
-    #[Groups(['book:read', 'book:write', 'user:read', 'favorite:read'])]
+    #[Groups(['book:read', 'book:write', 'user:read', 'favorite:read', 'exchange:detail'])]
     private ?string $author = null;
 
     #[ORM\Column(length: 20)]

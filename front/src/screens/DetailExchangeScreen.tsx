@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,12 +38,9 @@ export default function DetailExchangeScreen() {
   const loadExchangeDetail = async () => {
     try {
       const response = await api.getExchangeDetail(exchangeUuid);
-      console.log('📦 Réponse détail échange:', JSON.stringify(response, null, 2));
-      
       const exchangeData = response.data || response;
       setExchange(exchangeData);
 
-      // Si je suis le receiver et que c'est en attente, charger les livres dispo
       if (exchangeData.userReceiver?.uuid === user?.uuid && exchangeData.status === 'pending') {
         const booksResponse = await api.getAvailableBooks(exchangeUuid);
         const books = booksResponse.data || booksResponse;
@@ -134,15 +132,15 @@ export default function DetailExchangeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#5B93FF" />
       </View>
     );
   }
 
   if (!exchange) {
     return (
-      <View style={styles.container}>
+      <View style={styles.loadingContainer}>
         <Text style={styles.errorText}>Échange introuvable</Text>
       </View>
     );
@@ -150,16 +148,6 @@ export default function DetailExchangeScreen() {
 
   const isReceiver = exchange.userReceiver?.uuid === user?.uuid;
   const isPending = exchange.status === 'pending';
-
-  // ✅ LOGS DE DEBUG ICI (AVANT LE RETURN)
-  console.log('🔍 Debug Exchange:');
-  console.log('- exchange.userReceiver?.uuid:', exchange.userReceiver?.uuid);
-  console.log('- exchange.userRequester?.uuid:', exchange.userRequester?.uuid);
-  console.log('- user?.uuid:', user?.uuid);
-  console.log('- isReceiver:', isReceiver);
-  console.log('- isPending:', isPending);
-  console.log('- exchange.bookOne:', exchange.bookOne);
-  console.log('- exchange.userRequester:', exchange.userRequester);
 
   const statusLabels: Record<string, string> = {
     pending: 'En attente',
@@ -173,131 +161,181 @@ export default function DetailExchangeScreen() {
     rejected: '#FF3B30',
   };
 
+  const statusIcons: Record<string, string> = {
+    pending: 'time-outline',
+    validated: 'checkmark-circle',
+    rejected: 'close-circle',
+  };
+
   return (
     <ScrollView style={styles.container}>
-      {/* Statut */}
-      <View style={[styles.statusBadge, { backgroundColor: statusColors[exchange.status] }]}>
-        <Text style={styles.statusText}>{statusLabels[exchange.status]}</Text>
+      {/* Statut Badge */}
+      <View style={[styles.statusContainer, { backgroundColor: statusColors[exchange.status] }]}>
+        <Ionicons name={statusIcons[exchange.status] as any} size={32} color="#FFFFFF" />
+        <Text style={styles.statusLabel}>{statusLabels[exchange.status]}</Text>
       </View>
 
-      {/* Informations de l'échange */}
+      {/* Livre demandé */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Livre demandé</Text>
-        <Text style={styles.bookTitle}>{exchange.bookOne?.title || 'Titre inconnu'}</Text>
-        <Text style={styles.subtitle}>
-          Demandé par : {exchange.userRequester?.infosUser?.userName || 'Utilisateur'}
-        </Text>
-        <Text style={styles.date}>
-          Le {new Date(exchange.createdAt).toLocaleDateString('fr-FR')}
-        </Text>
+        <View style={styles.bookCard}>
+          <View style={styles.bookIconContainer}>
+            <Ionicons name="book" size={32} color="#5B93FF" />
+          </View>
+          <View style={styles.bookDetails}>
+            <Text style={styles.bookTitle}>{exchange.bookOne?.title || 'Titre inconnu'}</Text>
+            <Text style={styles.bookAuthor}>{exchange.bookOne?.author || 'Auteur inconnu'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="person-outline" size={20} color="#666666" />
+          <Text style={styles.infoText}>
+            Demandé par : <Text style={styles.infoTextuserName}>{exchange.userRequester?.infosUser?.userName || 'Utilisateur'}</Text>
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="calendar-outline" size={20} color="#666666" />
+          <Text style={styles.infoText}>
+            Le {new Date(exchange.createdAt).toLocaleDateString('fr-FR')}
+          </Text>
+        </View>
       </View>
 
-      {/* Si receiver + pending : Afficher les livres disponibles */}
+      {/* Si receiver + pending : Liste des livres disponibles */}
       {isReceiver && isPending && availableBooks.length > 0 && (
-        <>
-          <View style={styles.separator} />
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Livre souhaité en échange</Text>
-            {availableBooks.map((book) => (
-              <TouchableOpacity
-                key={book.id}
-                style={[
-                  styles.bookCard,
-                  selectedBook?.id === book.id && styles.bookCardSelected,
-                ]}
-                onPress={() => setSelectedBook(book)}
-              >
-                {book.images?.[0] && (
-                  <Image
-                    source={{ uri: `http://192.168.1.115:8000${book.images[0].imageUrl}` }}
-                    style={styles.bookImage}
-                  />
-                )}
-                <View style={styles.bookInfo}>
-                  <Text style={styles.bookCardTitle}>{book.title}</Text>
-                  <Text style={styles.bookCardAuthor}>{book.author}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Choisissez un livre à proposer</Text>
+          {availableBooks.map((book) => (
+            <TouchableOpacity
+              key={book.id}
+              style={[
+                styles.selectableBookCard,
+                selectedBook?.id === book.id && styles.selectableBookCardActive,
+              ]}
+              onPress={() => setSelectedBook(book)}
+            >
+              {book.images?.[0] ? (
+                <Image
+                  source={{ uri: `http://192.168.1.115:8000${book.images[0].imageUrl}` }}
+                  style={styles.bookImage}
+                />
+              ) : (
+                <View style={styles.bookImagePlaceholder}>
+                  <Ionicons name="book-outline" size={32} color="#999999" />
                 </View>
-                {selectedBook?.id === book.id && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Type d'échange */}
-          <View style={styles.separator} />
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Type d'échange</Text>
-            <View style={styles.exchangeTypeContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.exchangeTypeButton,
-                  selectedExchangeType === 'temporary' && styles.exchangeTypeButtonSelected,
-                ]}
-                onPress={() => setSelectedExchangeType('temporary')}
-              >
-                <Text
-                  style={[
-                    styles.exchangeTypeText,
-                    selectedExchangeType === 'temporary' && styles.exchangeTypeTextSelected,
-                  ]}
-                >
-                  Temporaire
+              )}
+              
+              <View style={styles.bookInfo}>
+                <Text style={styles.selectableBookTitle} numberOfLines={2}>
+                  {book.title}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.exchangeTypeButton,
-                  selectedExchangeType === 'permanent' && styles.exchangeTypeButtonSelected,
-                ]}
-                onPress={() => setSelectedExchangeType('permanent')}
-              >
-                <Text
-                  style={[
-                    styles.exchangeTypeText,
-                    selectedExchangeType === 'permanent' && styles.exchangeTypeTextSelected,
-                  ]}
-                >
-                  Permanent
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+                <Text style={styles.selectableBookAuthor}>{book.author}</Text>
+              </View>
 
-          {/* Boutons Accepter / Refuser */}
-          <View style={styles.separator} />
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
-              <Text style={styles.acceptButtonText}>✓ Accepter</Text>
+              {selectedBook?.id === book.id && (
+                <View style={styles.checkmarkContainer}>
+                  <Ionicons name="checkmark-circle" size={28} color="#34C759" />
+                </View>
+              )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
-              <Text style={styles.rejectButtonText}>✕ Refuser</Text>
-            </TouchableOpacity>
-          </View>
-        </>
+          ))}
+        </View>
       )}
 
-      {/* Si requester + pending : Bouton Annuler */}
+      {/* Type d'échange */}
+      {isReceiver && isPending && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Type d'échange</Text>
+          <View style={styles.exchangeTypeContainer}>
+            <TouchableOpacity
+              style={[
+                styles.exchangeTypeButton,
+                selectedExchangeType === 'temporary' && styles.exchangeTypeButtonActive,
+              ]}
+              onPress={() => setSelectedExchangeType('temporary')}
+            >
+              <Ionicons 
+                name="sync-outline" 
+                size={24} 
+                color={selectedExchangeType === 'temporary' ? '#5B93FF' : '#999999'} 
+              />
+              <Text
+                style={[
+                  styles.exchangeTypeText,
+                  selectedExchangeType === 'temporary' && styles.exchangeTypeTextActive,
+                ]}
+              >
+                Temporaire
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.exchangeTypeButton,
+                selectedExchangeType === 'permanent' && styles.exchangeTypeButtonActive,
+              ]}
+              onPress={() => setSelectedExchangeType('permanent')}
+            >
+              <Ionicons 
+                name="swap-horizontal" 
+                size={24} 
+                color={selectedExchangeType === 'permanent' ? '#5B93FF' : '#999999'} 
+              />
+              <Text
+                style={[
+                  styles.exchangeTypeText,
+                  selectedExchangeType === 'permanent' && styles.exchangeTypeTextActive,
+                ]}
+              >
+                Permanent
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Boutons d'action */}
+      {isReceiver && isPending && (
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
+            <Ionicons name="checkmark" size={24} color="#FFFFFF" />
+            <Text style={styles.acceptButtonText}>Accepter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
+            <Ionicons name="close" size={24} color="#FFFFFF" />
+            <Text style={styles.rejectButtonText}>Refuser</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {!isReceiver && isPending && (
-        <>
-          <View style={styles.separator} />
+        <View style={styles.actionsContainer}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
             <Text style={styles.cancelButtonText}>Annuler la demande</Text>
           </TouchableOpacity>
-        </>
+        </View>
       )}
 
-      {/* Si validé : Afficher le livre proposé */}
+      {/* Si validé : Afficher le livre choisi */}
       {exchange.status === 'validated' && exchange.bookTwo && (
-        <>
-          <View style={styles.separator} />
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Livre choisi</Text>
-            <Text style={styles.bookTitle}>{exchange.bookTwo.title}</Text>
-            <Text style={styles.subtitle}>Échange {exchange.exchangeType}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Livre proposé en échange</Text>
+          <View style={styles.bookCard}>
+            <View style={styles.bookIconContainer}>
+              <Ionicons name="book" size={32} color="#34C759" />
+            </View>
+            <View style={styles.bookDetails}>
+              <Text style={styles.bookTitle}>{exchange.bookTwo.title}</Text>
+              <Text style={styles.bookAuthor}>Échange {exchange.exchangeType}</Text>
+            </View>
           </View>
-        </>
+        </View>
       )}
+
+      <View style={styles.bottomSpacing} />
     </ScrollView>
   );
 }
@@ -305,149 +343,234 @@ export default function DetailExchangeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
-  statusBadge: {
-    padding: 15,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
   },
-  statusText: {
-    color: '#fff',
-    fontSize: 18,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  headerPlaceholder: {
+    width: 44,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    gap: 12,
+  },
+  statusLabel: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   section: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 12,
     padding: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  bookTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 5,
-  },
-  date: {
-    fontSize: 14,
-    color: '#999',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 16,
   },
   bookCard: {
     flexDirection: 'row',
-    padding: 15,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    marginBottom: 10,
     alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
   },
-  bookCardSelected: {
-    backgroundColor: '#e3f2fd',
+  bookIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#E8F1FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  bookDetails: {
+    flex: 1,
+  },
+  bookTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  infoTextuserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#5B93FF',
+    marginBottom: 4,
+  },
+  bookAuthor: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 15,
+    color: '#666666',
+    marginLeft: 12,
+  },
+  selectableBookCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: '#F8F9FA',
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: 'transparent',
+  },
+  selectableBookCardActive: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#34C759',
   },
   bookImage: {
     width: 60,
     height: 80,
-    borderRadius: 4,
-    marginRight: 15,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  bookImagePlaceholder: {
+    width: 60,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   bookInfo: {
     flex: 1,
   },
-  bookCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
+  selectableBookTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
   },
-  bookCardAuthor: {
-    fontSize: 14,
-    color: '#666',
+  selectableBookAuthor: {
+    fontSize: 13,
+    color: '#666666',
   },
-  checkmark: {
-    fontSize: 24,
-    color: '#007AFF',
-    fontWeight: 'bold',
+  checkmarkContainer: {
+    marginLeft: 8,
   },
   exchangeTypeContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   exchangeTypeButton: {
     flex: 1,
-    padding: 15,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
     borderWidth: 2,
-    borderColor: '#f5f5f5',
+    borderColor: 'transparent',
+    gap: 8,
   },
-  exchangeTypeButtonSelected: {
-    backgroundColor: '#e8f5e9',
-    borderColor: '#34C759',
+  exchangeTypeButtonActive: {
+    backgroundColor: '#E8F1FF',
+    borderColor: '#5B93FF',
   },
   exchangeTypeText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#666666',
   },
-  exchangeTypeTextSelected: {
-    color: '#34C759',
-    fontWeight: 'bold',
+  exchangeTypeTextActive: {
+    color: '#5B93FF',
+    fontWeight: '600',
   },
-  actions: {
+  actionsContainer: {
     flexDirection: 'row',
     padding: 20,
-    gap: 10,
+    gap: 12,
   },
   acceptButton: {
     flex: 1,
-    backgroundColor: '#34C759',
-    padding: 15,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#34C759',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
   },
   acceptButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   rejectButton: {
     flex: 1,
-    backgroundColor: '#FF3B30',
-    padding: 15,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF3B30',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
   },
   rejectButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   cancelButton: {
-    margin: 20,
-    backgroundColor: '#FF3B30',
-    padding: 15,
-    borderRadius: 8,
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF3B30',
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
   },
   cancelButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   errorText: {
-    color: 'red',
     fontSize: 16,
+    color: '#FF3B30',
     textAlign: 'center',
-    marginTop: 50,
+  },
+  bottomSpacing: {
+    height: 20,
   },
 });
