@@ -286,9 +286,6 @@ export default function BookDetailScreen() {
     <ScrollView style={styles.container}>
       {/* Header avec titre centré */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#000" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>{book.title}</Text>
       </View>
 

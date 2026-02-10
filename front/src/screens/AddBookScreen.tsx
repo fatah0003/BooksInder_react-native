@@ -174,22 +174,52 @@ export default function AddBookScreen() {
         },
       ]);
     } catch (error: any) {
-      console.error('Erreur lors de la création du livre:', error);
-      Alert.alert('Erreur', error.response?.data?.message || 'Une erreur est survenue');
-    } finally {
-      setLoading(false);
+  console.error('Erreur lors de la création du livre:', error);
+  
+  // ✅ Extraction détaillée de l'erreur
+  let errorMessage = 'Une erreur est survenue';
+  
+  if (error.response?.data) {
+    const data = error.response.data;
+    
+    // Si l'erreur contient un message direct
+    if (data.message) {
+      errorMessage = data.message;
     }
+    // Si l'erreur contient des violations de contraintes (Symfony)
+    else if (data.violations && Array.isArray(data.violations)) {
+      errorMessage = data.violations
+        .map((v: any) => `${v.propertyPath}: ${v.message}`)
+        .join('\n');
+    }
+    // Si l'erreur contient un tableau d'erreurs
+    else if (data.errors) {
+      if (Array.isArray(data.errors)) {
+        errorMessage = data.errors.join('\n');
+      } else if (typeof data.errors === 'object') {
+        errorMessage = Object.entries(data.errors)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join('\n');
+      }
+    }
+    // Si l'erreur contient un détail
+    else if (data.detail) {
+      errorMessage = data.detail;
+    }
+  }
+  
+  // Affichage de l'erreur à l'utilisateur
+  Alert.alert('Erreur', errorMessage);
+} finally {
+  setLoading(false);
+}
+
   };
 
   return (
     
     <ScrollView style={styles.container}>
-      {/* Bouton retour */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={28} color="#000" />
-      </TouchableOpacity>
-
-      {/* Illustration */}
+           {/* Illustration */}
       <View style={styles.illustrationContainer}>
         <Image
           source={require('../../assets/images/image-ajout-form.png')}
@@ -201,7 +231,7 @@ export default function AddBookScreen() {
       <Text style={styles.title}>Ajouter un Livre</Text>
 
       {/* ISBN */}
-      <Text style={styles.label}>ISBN</Text>
+      <Text style={styles.label}>ISBN *</Text>
       <TextInput
         style={styles.input}
         value={isbn}
