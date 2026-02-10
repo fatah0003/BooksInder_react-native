@@ -5,6 +5,7 @@ import { Book } from '../types/Book';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { API_URL, BASE_URL } from '../config/apiConfig';
 
 // Listes des options pour les filtres
 const CATEGORIES = [
@@ -502,7 +503,7 @@ export default function BookListScreen() {
             >
               {imageToShow ? (
                 <Image
-                  source={{ uri: `http://192.168.1.115:8000${imageToShow.imageUrl}` }}
+                  source={{ uri: `${BASE_URL}${imageToShow.imageUrl}` }}
                   style={styles.bookImage}
                   resizeMode="cover"
                 />

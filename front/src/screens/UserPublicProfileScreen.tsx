@@ -11,6 +11,7 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { api } from '../services/api';
 import { UserPublicProfileData } from '../types/UserPublicProfile';
+import { API_URL, BASE_URL } from '../config/apiConfig';
 
 type UserPublicProfileRouteProp = RouteProp<{ UserPublicProfile: { userUuid: string } }, 'UserPublicProfile'>;
 
@@ -109,7 +110,7 @@ export default function UserPublicProfileScreen() {
               >
                 {imageToShow && (
                   <Image
-                    source={{ uri: `http://192.168.1.115:8000${imageToShow.imageUrl}` }}
+                    source={{ uri: `${BASE_URL}${imageToShow.imageUrl}` }}
                     style={styles.bookImage}
                   />
                 )}

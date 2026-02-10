@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { bookService, UpdateBookData, BookCategorie, BookState, ExchangeType } from '../services/bookService';
 import { BOOK_CATEGORIES, BOOK_STATES, EXCHANGE_TYPES } from '../constants/bookOptions';
+import { API_URL, BASE_URL } from '../config/apiConfig';
 import { Book } from '../types/Book';
 
 type EditBookRouteProp = RouteProp<{ EditBook: { bookUuid: string; book: Book } }, 'EditBook'>;
@@ -349,7 +350,7 @@ export default function EditBookScreen() {
         <Image source={{ uri: frontImageUri }} style={styles.imagePreview} />
       ) : currentFrontImage ? (
         <Image
-          source={{ uri: `http://192.168.1.115:8000${currentFrontImage.imageUrl}` }}
+          source={{ uri: `${BASE_URL}${currentFrontImage.imageUrl}` }}
           style={styles.imagePreview}
         />
       ) : null}
@@ -362,7 +363,7 @@ export default function EditBookScreen() {
         <Image source={{ uri: backImageUri }} style={styles.imagePreview} />
       ) : currentBackImage ? (
         <Image
-          source={{ uri: `http://192.168.1.115:8000${currentBackImage.imageUrl}` }}
+          source={{ uri: `${BASE_URL}${currentBackImage.imageUrl}` }}
           style={styles.imagePreview}
         />
       ) : null}

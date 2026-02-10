@@ -13,6 +13,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { API_URL, BASE_URL } from '../config/apiConfig';
 
 type DetailExchangeRouteProp = RouteProp<
   { DetailExchange: { exchangeUuid: string } },
@@ -218,7 +219,7 @@ export default function DetailExchangeScreen() {
             >
               {book.images?.[0] ? (
                 <Image
-                  source={{ uri: `http://192.168.1.115:8000${book.images[0].imageUrl}` }}
+                  source={{ uri: `${BASE_URL}${book.images[0].imageUrl}` }}
                   style={styles.bookImage}
                 />
               ) : (

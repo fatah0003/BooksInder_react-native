@@ -2,8 +2,7 @@ import axios from 'axios';
 import { Book } from '../types/Book';
 import type { Conversation, Message } from '../types/Chat';
 import type { Favorite, FavoriteCheckResponse, FavoriteToggleResponse } from '../types/Favorite';
-
-const API_URL = 'http://192.168.1.115:8000/api';
+import { API_URL, BASE_URL } from '../config/apiConfig';
 
 const apiClient = axios.create({
   baseURL: API_URL,

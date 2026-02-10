@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../services/api';
 import { Book } from '../types/Book';
 import { Ionicons } from '@expo/vector-icons';
+import { API_URL, BASE_URL } from '../config/apiConfig';
 
 const ProfileScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
@@ -272,7 +273,7 @@ const ProfileScreen = ({ navigation }: any) => {
                     >
                       {imageToShow ? (
                         <Image
-                          source={{ uri: `http://192.168.1.115:8000${imageToShow.imageUrl}` }}
+                          source={{ uri: `${BASE_URL}${imageToShow.imageUrl}` }}
                           style={styles.bookImage}
                         />
                       ) : (

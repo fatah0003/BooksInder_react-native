@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { bookService } from '../services/bookService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { API_URL, BASE_URL } from '../config/apiConfig';
 
 type BookDetailRouteProp = RouteProp<{ BookDetail: { bookUuid: string } }, 'BookDetail'>;
 
@@ -277,14 +278,14 @@ export default function BookDetailScreen() {
       <View style={styles.imagesContainer}>
         {frontImage && (
           <Image
-            source={{ uri: `http://192.168.1.115:8000${frontImage.imageUrl}` }}
+            source={{ uri: `${BASE_URL}${frontImage.imageUrl}` }}
             style={styles.bookImage}
             resizeMode="cover"
           />
         )}
         {backImage && (
           <Image
-            source={{ uri: `http://192.168.1.115:8000${backImage.imageUrl}` }}
+            source={{ uri: `${BASE_URL}${backImage.imageUrl}` }}
             style={styles.bookImage}
             resizeMode="cover"
           />
