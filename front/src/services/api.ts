@@ -1,8 +1,9 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Book } from '../types/Book';
 import type { Conversation, Message } from '../types/Chat';
 import type { Favorite, FavoriteCheckResponse, FavoriteToggleResponse } from '../types/Favorite';
-import { API_URL, BASE_URL } from '../config/apiConfig';
+import { API_URL } from '../config/apiConfig';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -11,6 +12,88 @@ const apiClient = axios.create({
   },
   timeout: 10000,
 });
+
+// Fonction pour vérifier si une route est publique (pas besoin de token)
+const isPublicRoute = (url?: string): boolean => {
+  if (!url) return false;
+  
+  // Routes publiques définies dans security.yaml
+  const publicPatterns = [
+    /^\/login$/,                      // POST /api/login
+    /^\/register$/,                   // POST /api/register
+    /^\/books$/,                      // GET /api/books (liste)
+    /^\/books\?/,                     // GET /api/books?page=1 (avec params)
+    /^\/books\/[a-f0-9-]+$/,         // GET /api/books/{uuid} (détail)
+    /^\/password\/reset-request$/,   // POST /api/password/reset-request
+    /^\/password\/reset-confirm$/,   // POST /api/password/reset-confirm
+  ];
+  
+  return publicPatterns.some(pattern => pattern.test(url));
+};
+
+// Callback pour déconnexion (sera défini par AuthContext)
+let onTokenExpired: (() => void) | null = null;
+
+export const setTokenExpiredCallback = (callback: () => void) => {
+  onTokenExpired = callback;
+};
+
+// Intercepteur REQUEST
+apiClient.interceptors.request.use(
+  async (config) => {
+    if (!isPublicRoute(config.url)) {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔑 Token ajouté pour:', config.url);
+      }
+    } else {
+      console.log('🌐 Route publique (pas de token):', config.url);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Intercepteur RESPONSE (avec déconnexion automatique)
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      console.log('Token expiré détecté (401)');
+      
+      // Supprimer les données locales
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      
+      // Appeler le callback pour déconnecter dans AuthContext
+      if (onTokenExpired) {
+        console.log('Déconnexion automatique déclenchée');
+        onTokenExpired();
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Intercepteur RESPONSE : Gérer les erreurs 401 (token expiré)
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      console.log('Token expiré détecté (401), nettoyage des données locales');
+      
+      // Supprimer les données locales
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
+      
+      // La déconnexion sera gérée par AuthContext lors du prochain refresh
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 export interface BooksResponse {
   data: Book[];
@@ -52,7 +135,7 @@ export const api = {
   // détails livre
   getBookDetail: async (uuid: string): Promise<Book> => {
     const response = await apiClient.get(`/books/${uuid}`);
-    console.log('📦 Response complète:', response.data);
+    console.log('Response complète:', response.data);
     return response.data.data || response.data;
   },
 
@@ -68,170 +151,130 @@ export const api = {
     return response.data.data;
   },
 
-  // ============================================
-// EXCHANGES
-// ============================================
+  // EXCHANGES
+  createExchange: async (bookOneId: number) => {
+    const response = await apiClient.post('/exchanges', { bookOneId });
+    return response.data;
+  },
 
-// Créer une demande d'échange
-createExchange: async (bookOneId: number) => {
-  const response = await apiClient.post('/exchanges', {
-    bookOneId
-  });
-  return response.data;
-},
+  getReceivedExchanges: async (status?: string, limit: number = 10) => {
+    const params: any = { limit };
+    if (status) params.status = status;
+    const response = await apiClient.get('/exchanges/received', { params });
+    return response.data;
+  },
 
+  getSentExchanges: async (limit: number = 10) => {
+    const params = { limit };
+    const response = await apiClient.get('/exchanges/sent', { params });
+    return response.data;
+  },
 
-// Récupérer les demandes reçues
-getReceivedExchanges: async (status?: string, limit: number = 10) => {
-  const params: any = { limit };
-  if (status) params.status = status;
-  
-  const response = await apiClient.get('/exchanges/received', { params });
-  return response.data;
-},
+  getCompletedExchanges: async (limit: number = 10) => {
+    const params = { limit };
+    const response = await apiClient.get('/exchanges/completed', { params });
+    return response.data;
+  },
 
-// Récupérer les demandes envoyées
-getSentExchanges: async (limit: number = 10) => {
-  const params = { limit };
-  const response = await apiClient.get('/exchanges/sent', { params });
-  return response.data;
-},
+  getExchangeDetail: async (uuid: string) => {
+    const response = await apiClient.get(`/exchanges/${uuid}`);
+    return response.data;
+  },
 
-// Récupérer les échanges complétés
-getCompletedExchanges: async (limit: number = 10) => {
-  const params = { limit };
-  const response = await apiClient.get('/exchanges/completed', { params });
-  return response.data;
-},
+  getAvailableBooks: async (exchangeUuid: string) => {
+    const response = await apiClient.get(`/exchanges/${exchangeUuid}/available-books`);
+    return response.data;
+  },
 
-// Détail d'un échange
-getExchangeDetail: async (uuid: string) => {
-  const response = await apiClient.get(`/exchanges/${uuid}`);
-  return response.data;
-},
+  acceptExchange: async (uuid: string, bookTwoId: number, exchangeType: string) => {
+    const response = await apiClient.put(`/exchanges/${uuid}/accept`, {
+      bookTwoId,
+      exchangeType
+    });
+    return response.data;
+  },
 
-// Livres disponibles du demandeur
-getAvailableBooks: async (exchangeUuid: string) => {
-  const response = await apiClient.get(`/exchanges/${exchangeUuid}/available-books`);
-  return response.data;
-},
+  rejectExchange: async (uuid: string) => {
+    const response = await apiClient.put(`/exchanges/${uuid}/reject`);
+    return response.data;
+  },
 
-// Accepter un échange
-acceptExchange: async (uuid: string, bookTwoId: number, exchangeType: string) => {
-  const response = await apiClient.put(`/exchanges/${uuid}/accept`, {
-    bookTwoId,
-    exchangeType
-  });
-  return response.data;
-},
+  cancelExchange: async (uuid: string) => {
+    const response = await apiClient.delete(`/exchanges/${uuid}/cancel`);
+    return response.data;
+  },
 
-// Refuser un échange
-rejectExchange: async (uuid: string) => {
-  const response = await apiClient.put(`/exchanges/${uuid}/reject`);
-  return response.data;
-},
+  // NOTIFICATIONS
+  getNotifications: async (limit: number = 20, unread: boolean = false) => {
+    const params: any = { limit };
+    if (unread) params.unread = true;
+    const response = await apiClient.get('/notifications', { params });
+    return response.data;
+  },
 
-// Annuler un échange
-cancelExchange: async (uuid: string) => {
-  const response = await apiClient.delete(`/exchanges/${uuid}/cancel`);
-  return response.data;
-},
+  getUnreadNotificationsCount: async () => {
+    const response = await apiClient.get('/notifications/unread-count');
+    return response.data;
+  },
 
-// ============================================
-// NOTIFICATIONS
-// ============================================
+  markNotificationAsRead: async (id: number) => {
+    const response = await apiClient.patch(`/notifications/${id}/read`);
+    return response.data;
+  },
 
-// Récupérer les notifications
-getNotifications: async (limit: number = 20, unread: boolean = false) => {
-  const params: any = { limit };
-  if (unread) params.unread = true;
-  
-  const response = await apiClient.get('/notifications', { params });
-  return response.data;
-},
+  markAllNotificationsAsRead: async () => {
+    const response = await apiClient.patch('/notifications/mark-all-read');
+    return response.data;
+  },
 
-// Compter les notifications non lues
-getUnreadNotificationsCount: async () => {
-  const response = await apiClient.get('/notifications/unread-count');
-  return response.data;
-},
+  deleteNotification: async (id: number) => {
+    const response = await apiClient.delete(`/notifications/${id}`);
+    return response.data;
+  },
 
-// Marquer une notification comme lue
-markNotificationAsRead: async (id: number) => {
-  const response = await apiClient.patch(`/notifications/${id}/read`);
-  return response.data;
-},
+  clearReadNotifications: async () => {
+    const response = await apiClient.delete('/notifications/clear-read');
+    return response.data;
+  },
 
-// Marquer toutes comme lues
-markAllNotificationsAsRead: async () => {
-  const response = await apiClient.patch('/notifications/mark-all-read');
-  return response.data;
-},
+  // CHAT
+  getConversations: async (): Promise<Conversation[]> => {
+    const response = await apiClient.get('/chat/conversations');
+    return response.data.data;
+  },
 
-// Supprimer une notification
-deleteNotification: async (id: number) => {
-  const response = await apiClient.delete(`/notifications/${id}`);
-  return response.data;
-},
+  getConversationMessages: async (conversationId: string): Promise<Message[]> => {
+    const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`);
+    return response.data.data;
+  },
 
-// Supprimer toutes les notifications lues
-clearReadNotifications: async () => {
-  const response = await apiClient.delete('/notifications/clear-read');
-  return response.data;
-},
+  sendMessage: async (conversationId: string, content: string): Promise<Message> => {
+    const response = await apiClient.post(`/chat/conversations/${conversationId}/messages`, {
+      content: content
+    });
+    return response.data.data;
+  },
 
-// ============================================
-// CHAT
-// ============================================
+  getUnreadConversationsCount: async (): Promise<number> => {
+    const response = await apiClient.get('/chat/unread-count');
+    return response.data.data.count;
+  },
 
-// Récupère toutes les conversations de l'utilisateur connecté
-getConversations: async (): Promise<Conversation[]> => {
-  const response = await apiClient.get('/chat/conversations');
-  return response.data.data;
-},
+  markConversationAsRead: async (conversationId: string): Promise<void> => {
+    await apiClient.post(`/chat/conversations/${conversationId}/mark-read`);
+  },
 
-// Récupère tous les messages d'une conversation spécifique
-getConversationMessages: async (conversationId: string): Promise<Message[]> => {
-  const response = await apiClient.get(`/chat/conversations/${conversationId}/messages`);
-  return response.data.data;
-},
-
-// Envoie un nouveau message dans une conversation
-sendMessage: async (conversationId: string, content: string): Promise<Message> => {
-  const response = await apiClient.post(`/chat/conversations/${conversationId}/messages`, {
-    content: content
-  });
-  return response.data.data;
-},
-
-// Compte le nombre de conversations avec messages non lus
-getUnreadConversationsCount: async (): Promise<number> => {
-  const response = await apiClient.get('/chat/unread-count');
-  return response.data.data.count;
-},
-
-// Marque tous les messages d'une conversation comme lus
-markConversationAsRead: async (conversationId: string): Promise<void> => {
-  await apiClient.post(`/chat/conversations/${conversationId}/mark-read`);
-},
-
-  // ============================================
   // FAVORIS
-  // ============================================
-
-  // Toggle : ajouter ou retirer un livre des favoris
   toggleFavorite: async (bookId: number): Promise<FavoriteToggleResponse> => {
     const response = await apiClient.patch(`/favorites/toggle/${bookId}`);
     return response.data;
   },
 
-  // Vérifier si un livre est dans les favoris
   checkFavorite: async (bookId: number): Promise<FavoriteCheckResponse> => {
     const response = await apiClient.get(`/favorites/check/${bookId}`);
     return response.data;
   },
 
-  // Récupérer la liste de mes favoris
   getMyFavorites: async (): Promise<Favorite[]> => {
     const response = await apiClient.get('/favorites');
     return response.data.data;

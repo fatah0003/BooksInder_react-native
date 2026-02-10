@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert, } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useRoute, RouteProp, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Book } from '../types/Book';
 import { api } from '../services/api';
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { bookService } from '../services/bookService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL, BASE_URL } from '../config/apiConfig';
+import { BASE_URL } from '../config/apiConfig';
 
 type BookDetailRouteProp = RouteProp<{ BookDetail: { bookUuid: string } }, 'BookDetail'>;
 
@@ -24,17 +24,21 @@ export default function BookDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isMyBook, setIsMyBook] = useState(false);
 
+  // Vérifier si le livre est en favori
   const checkIfFavoriteWithId = async (bookId: number) => {
     try {
       const response = await api.checkFavorite(bookId);
       setIsFavorite(response.isFavorite);
       return response.isFavorite;
-    } catch (error) {
-      console.error('Erreur vérification favori:', error);
+    } catch (error: any) {
+      if (error.response?.status !== 401) {
+        console.warn('Erreur vérification favori:', error.message);
+      }
       return false;
     }
   };
 
+  // Vérifier si c'est mon livre
   const checkIfMyBookWithUuid = async (ownerUuid: string) => {
     try {
       const userStr = await AsyncStorage.getItem('user');
@@ -42,11 +46,12 @@ export default function BookDetailScreen() {
         const currentUser = JSON.parse(userStr);
         setIsMyBook(currentUser.uuid === ownerUuid);
       }
-    } catch (error) {
-      console.error('Erreur vérification propriétaire:', error);
+    } catch (error: any) {
+      console.warn('Erreur vérification propriétaire:', error.message);
     }
   };
 
+  // Toggle favori
   const handleToggleFavorite = async () => {
     if (!book?.id) return;
     if (isMyBook) {
@@ -59,26 +64,15 @@ export default function BookDetailScreen() {
       setIsFavorite(response.isFavorite);
       Alert.alert('Succès', response.message, [{ text: 'OK' }]);
     } catch (error: any) {
-      console.error('Erreur toggle favori:', error);
+      if (error.response?.status === 401) {
+        return;
+      }
+      console.warn('Erreur toggle favori:', error.message);
       Alert.alert('Erreur', error.response?.data?.message || 'Impossible de modifier les favoris');
     }
   };
 
-  useEffect(() => {
-    loadBookDetail();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (book?.id) {
-        checkIfFavoriteWithId(book.id);
-      }
-      if (book?.uuid && user) {
-        checkExistingExchange(book.uuid);
-      }
-    }, [book?.id, book?.uuid, user])
-  );
-
+  // Charger les détails du livre
   const loadBookDetail = async () => {
     try {
       const response = await api.getBookDetail(bookUuid);
@@ -99,17 +93,24 @@ export default function BookDetailScreen() {
         promises.push(checkExistingExchange(bookData.uuid));
       }
 
+      // Gestion silencieuse des erreurs 401
       Promise.all(promises).catch(err => {
-        console.error('Erreur chargement données secondaires:', err);
+        if (err.response?.status !== 401) {
+          console.warn('Erreur chargement données secondaires:', err.message);
+        }
       });
 
     } catch (err: any) {
-      console.error('Erreur:', err.message);
+      // Gestion silencieuse des erreurs 401
+      if (err.response?.status !== 401) {
+        console.warn('Erreur chargement détail livre:', err.message);
+      }
       setError(err.message);
       setLoading(false);
     }
   };
 
+  // Vérifier si une demande d'échange existe déjà
   const checkExistingExchange = async (bookUuid: string) => {
     if (!user) return;
 
@@ -122,12 +123,29 @@ export default function BookDetailScreen() {
         );
         setExistingExchange(existing || null);
       }
-    } catch (error) {
-      console.log('Erreur vérification demande:', error);
+    } catch (error: any) {
+      if (error.response?.status !== 401) {
+        console.warn('Erreur vérification demande:', error.message);
+      }
     } finally {
       setCheckingExchange(false);
     }
   };
+
+  useEffect(() => {
+    loadBookDetail();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (book?.id) {
+        checkIfFavoriteWithId(book.id);
+      }
+      if (book?.uuid && user) {
+        checkExistingExchange(book.uuid);
+      }
+    }, [book?.id, book?.uuid, user])
+  );
 
   const isOwner = user && book?.user && user.uuid === book.user.uuid;
 
@@ -248,7 +266,6 @@ export default function BookDetailScreen() {
     science_fiction: 'Science Fiction',
     philosophy: 'Philosophie',
     historical: 'Histoire',
-    //  ajout autres, apres
   };
 
   const stateLabels: Record<string, string> = {
@@ -259,6 +276,7 @@ export default function BookDetailScreen() {
     acceptable: 'État acceptable',
     well_loved: 'Bien vécu',
   };
+
   const exchangeTypeLabels: Record<string, string> = {
     temporary: 'Temporaire',
     permanent: 'Permanent',
@@ -373,7 +391,6 @@ export default function BookDetailScreen() {
                 .join(', ')}
             </Text>
           </View>
-
         </View>
 
         {/* Boutons d'action */}
@@ -437,8 +454,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -459,8 +474,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
   },
-
-  // Images (réduites et centrées)
   imagesContainer: {
     alignItems: 'center',
     paddingHorizontal: 50,
@@ -477,14 +490,10 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
-
-  // Info container
   infoContainer: {
     paddingHorizontal: 20,
     paddingBottom: 30,
   },
-
-  // Auteur + Favori
   authorRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -511,16 +520,12 @@ const styles = StyleSheet.create({
     elevation: 3,
     marginLeft: 10,
   },
-
-  // Description
   description: {
     fontSize: 14,
     color: '#999',
     lineHeight: 20,
     marginBottom: 15,
   },
-
-  // Propriétaire
   ownerText: {
     fontSize: 14,
     color: '#000',
@@ -530,8 +535,6 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-
-  // Section Détails
   detailsSection: {
     marginBottom: 25,
   },
@@ -558,8 +561,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     flex: 1,
   },
-
-  // Bouton d'échange
   exchangeButton: {
     backgroundColor: '#4CAF50',
     paddingVertical: 15,
@@ -572,8 +573,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-  // Boutons propriétaire
   ownerActions: {
     flexDirection: 'row',
     gap: 10,
@@ -604,3 +603,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+

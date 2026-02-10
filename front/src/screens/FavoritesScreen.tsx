@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Image, } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { api } from '../services/api';
 import type { Favorite } from '../types/Favorite';
@@ -10,44 +10,41 @@ export default function FavoritesScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Charge la liste des favoris
     const loadFavorites = async () => {
         try {
             const data = await api.getMyFavorites();
             setFavorites(data);
-        } catch (error) {
-            console.error('Erreur chargement favoris:', error);
+        } catch (error: any) {
+            // Silencieux si 401
+            if (error.response?.status !== 401) {
+                console.warn('Erreur chargement favoris:', error.message);
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    // Charge au premier affichage
     React.useEffect(() => {
         loadFavorites();
     }, []);
 
-    // Recharge à chaque retour sur l'écran
     useFocusEffect(
         React.useCallback(() => {
             loadFavorites();
         }, [])
     );
 
-    // Affiche un livre favori dans la liste
     const renderFavorite = ({ item }: { item: Favorite }) => {
         return (
             <TouchableOpacity
                 style={styles.favoriteItem}
                 onPress={() => {
-                    // Navigation inter-stacks : ProfileStack → BookStack
                     navigation.getParent()?.navigate('Livres', {
                         screen: 'BookDetail',
                         params: { bookUuid: item.book.uuid },
                     });
                 }}
-
             >
                 <View style={styles.favoriteContent}>
                     <View style={styles.bookInfo}>

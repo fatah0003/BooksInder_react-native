@@ -40,7 +40,6 @@ security:
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
         - { path: ^/api/books$, roles: PUBLIC_ACCESS, methods: [ GET ] }
-        - { path: ^/api/books/\d+$, roles: PUBLIC_ACCESS, methods: [ GET ] }
         - { path: ^/api/password/reset-request, roles: PUBLIC_ACCESS }
         - { path: ^/api/password/reset-confirm, roles: PUBLIC_ACCESS }
 

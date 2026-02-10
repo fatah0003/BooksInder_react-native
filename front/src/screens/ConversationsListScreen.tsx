@@ -15,7 +15,6 @@ import { api } from '../services/api';
 import type { Conversation } from '../types/Chat';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
 export default function ConversationsListScreen() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,8 +44,11 @@ export default function ConversationsListScreen() {
                 }
             });
 
-        } catch (error) {
-            console.error('Erreur chargement conversations:', error);
+        } catch (error: any) {
+            // Silencieux si 401
+            if (error.response?.status !== 401) {
+                console.warn('Erreur chargement conversations:', error.message);
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -68,8 +70,11 @@ export default function ConversationsListScreen() {
                 ...prev,
                 [userUuid]: profile.user?.infosUser?.avatar || null
             }));
-        } catch (error) {
-            console.error('Erreur chargement utilisateur:', error);
+        } catch (error: any) {
+            // Silencieux si 401
+            if (error.response?.status !== 401) {
+                console.warn('Erreur chargement utilisateur:', error.message);
+            }
             setUserNames(prev => ({
                 ...prev,
                 [userUuid]: 'Utilisateur'
@@ -95,12 +100,10 @@ export default function ConversationsListScreen() {
         const date = new Date(dateString);
         const today = new Date();
         
-        // Si c'est aujourd'hui, afficher l'heure
         if (date.toDateString() === today.toDateString()) {
             return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         }
         
-        // Sinon afficher la date courte
         return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
@@ -119,7 +122,6 @@ export default function ConversationsListScreen() {
                     } as never);
                 }}
             >
-                {/* Avatar */}
                 <View style={styles.avatarContainer}>
                     {avatar ? (
                         <Image 
@@ -133,7 +135,6 @@ export default function ConversationsListScreen() {
                     )}
                 </View>
 
-                {/* Contenu */}
                 <View style={styles.contentContainer}>
                     <View style={styles.topRow}>
                         <Text style={styles.userName}>{userName}</Text>
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
     separator: {
         height: 1,
         backgroundColor: '#F0F0F0',
-        marginLeft: 78, // Aligné avec le texte (16px padding + 50px avatar + 12px margin)
+        marginLeft: 78,
     },
     emptyContainer: {
         flex: 1,

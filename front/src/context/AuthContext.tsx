@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/authService';
 import { User } from '../types/User';
+import { setTokenExpiredCallback } from '../services/api';
 
 interface AuthContextData {
   user: User | null;
@@ -19,16 +20,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     loadStoredData();
+    
+    // Enregistrer le callback de déconnexion automatique
+    setTokenExpiredCallback(() => {
+      console.log('🚨 Callback déconnexion appelé depuis l\'intercepteur');
+      setUser(null);
+    });
   }, []);
 
   async function loadStoredData() {
     try {
       const restoredUser = await authService.restoreSession();
+      
       if (restoredUser) {
-        setUser(restoredUser);
+        try {
+          console.log('Vérification de la validité du token...');
+          const validUser = await authService.getCurrentUser();
+          setUser(validUser);
+          console.log(' Token valide, session restaurée');
+        } catch (error: any) {
+          console.log('Token expiré au démarrage, déconnexion');
+          await authService.logout();
+          setUser(null);
+        }
       }
     } catch (error) {
-      console.log('Pas de session');
+      console.log('❌ Erreur lors de la restauration de session:', error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -49,8 +67,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser = await authService.getCurrentUser();
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
-    } catch (error) {
-      console.log('Erreur refresh user:', error);
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        console.log('Token expiré lors du refresh');
+        await logout();
+      } else {
+        console.log('Erreur refresh user:', error);
+      }
     }
   }
 

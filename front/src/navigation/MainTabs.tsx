@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import BookListScreen from '../screens/BookListScreen';
@@ -38,41 +37,28 @@ function BookStackScreen() {
       <BookStack.Screen
         name="BookDetail"
         component={BookDetailScreen}
-        options={{
-          title: 'Détails du livre',
-          headerBackTitle: 'Retour'
-        }}
+        options={{ title: 'Détails du livre', headerBackTitle: 'Retour' }}
       />
       <BookStack.Screen
         name="AddBook"
         component={AddBookScreen}
-        options={{
-          title: 'Ajouter un livre',
-          headerBackTitle: 'Retour'
-        }}
+        options={{ title: 'Ajouter un livre', headerBackTitle: 'Retour' }}
       />
       <BookStack.Screen
         name="EditBook"
         component={EditBookScreen}
-        options={{
-          title: 'Modifier le livre',
-          headerBackTitle: 'Retour'
-        }}
+        options={{ title: 'Modifier le livre', headerBackTitle: 'Retour' }}
       />
       <BookStack.Screen
         name="UserPublicProfile"
         component={UserPublicProfileScreen}
-        options={{
-          title: 'Profil utilisateur',
-          headerBackTitle: 'Retour'
-        }}
+        options={{ title: 'Profil utilisateur', headerBackTitle: 'Retour' }}
       />
       <BookStack.Screen
         name="DetailExchange"
         component={DetailExchangeScreen}
         options={{ title: 'Détail de l\'échange' }}
       />
-
     </BookStack.Navigator>
   );
 }
@@ -84,17 +70,13 @@ function ExchangeStackScreen() {
       <ExchangeStack.Screen
         name="ReceivedExchanges"
         component={ReceivedExchangesScreen}
-        options={{
-          title: 'Demandes reçues',
-          headerShown: true
-        }}
+        options={{ title: 'Demandes reçues', headerShown: true }}
       />
     </ExchangeStack.Navigator>
   );
 }
 
-
-// Pour le profil (ProfileScreen + EditProfileScreen)
+// Pour le profil
 function ProfileStackScreen() {
   return (
     <ProfileStack.Navigator>
@@ -106,26 +88,17 @@ function ProfileStackScreen() {
       <ProfileStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{
-          title: 'Modifier le profil',
-          headerBackTitle: 'Retour'
-        }}
+        options={{ title: 'Modifier le profil', headerBackTitle: 'Retour' }}
       />
       <ProfileStack.Screen
         name="ReceivedExchanges"
         component={ReceivedExchangesScreen}
-        options={{
-          title: 'Demandes reçues',
-          headerBackTitle: 'Retour'
-        }}
+        options={{ title: 'Demandes reçues', headerBackTitle: 'Retour' }}
       />
       <ProfileStack.Screen
         name="DetailExchange"
         component={DetailExchangeScreen}
-        options={{
-          title: 'Détail de l\'échange',
-          headerBackTitle: 'Retour'
-        }}
+        options={{ title: 'Détail de l\'échange', headerBackTitle: 'Retour' }}
       />
       <ProfileStack.Screen
         name="Notifications"
@@ -159,37 +132,53 @@ function ChatStack() {
   );
 }
 
-
-
-
 const MainTabs = () => {
   const { user } = useAuth();
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   // Fonction pour charger le compteur de conversations non lues
   const loadUnreadChatsCount = async () => {
-    if (!user) return; // Si pas connecté, on ne fait rien
+    if (!user) {
+      setUnreadChatsCount(0);
+      return;
+    }
 
     try {
       const count = await api.getUnreadConversationsCount();
       setUnreadChatsCount(count);
-    } catch (error) {
-      console.error('Erreur chargement compteur chat:', error);
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        // Silencieux (déconnexion automatique en cours)
+        console.log('Token expiré lors du chargement chat count');
+        setUnreadChatsCount(0);
+      } else {
+        // Afficher uniquement les VRAIES erreurs
+        console.warn('Erreur chargement compteur chat:', error.message);
+      }
     }
   };
 
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
-
   // Fonction pour charger le compteur de notifications non lues
   const loadUnreadNotificationsCount = async () => {
-    if (!user) return;
+    if (!user) {
+      setUnreadNotificationsCount(0);
+      return;
+    }
 
     try {
       const data = await api.getUnreadNotificationsCount();
-      console.log('🔔 Compteur notifications reçu:', data);
-      setUnreadNotificationsCount(data.unreadCount || 0); // <-- unreadCount au lieu de count
-    } catch (error) {
-      console.error('Erreur chargement compteur notifications:', error);
+      console.log('Compteur notifications reçu:', data);
+      setUnreadNotificationsCount(data.unreadCount || 0);
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        // Silencieux (déconnexion automatique en cours)
+        console.log('Token expiré lors du chargement notifications count');
+        setUnreadNotificationsCount(0);
+      } else {
+        // Afficher uniquement les VRAIES erreurs
+        console.warn('Erreur chargement compteur notifications:', error.message);
+      }
     }
   };
 
@@ -201,64 +190,61 @@ const MainTabs = () => {
     }
   }, [user]);
 
-  // Polling toutes les 30 secondes (comme les notifications)
+  // Polling toutes les 30 secondes
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(() => {
       loadUnreadChatsCount();
-      loadUnreadNotificationsCount(); // <-- Ajoute cette ligne
+      loadUnreadNotificationsCount();
     }, 30000); // 30 secondes
 
     return () => clearInterval(interval);
   }, [user]);
 
-
   return (
     <Tab.Navigator>
-  {/* Livres */}
-  <Tab.Screen
-    name="Livres"
-    component={BookStackScreen}
-    options={{
-      headerShown: false,
-      tabBarLabel: 'Livres',
-      tabBarIcon: ({ color, size }) => (
-        <Ionicons name="book-outline" size={size} color={color} />
-      ),
-    }}
-  />
+      {/* Livres */}
+      <Tab.Screen
+        name="Livres"
+        component={BookStackScreen}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Livres',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
 
-  {/* Chat */}
-  <Tab.Screen
-    name="Chat"
-    component={user ? ChatStack : AuthStack}
-    options={{
-      headerShown: false,
-      tabBarLabel: 'Chat',
-      tabBarIcon: ({ color, size }) => (
-        <Ionicons name="chatbubble-outline" size={size} color={color} />
-      ),
-      tabBarBadge: unreadChatsCount > 0 ? unreadChatsCount : undefined,
-    }}
-  />
+      {/* Chat */}
+      <Tab.Screen
+        name="Chat"
+        component={user ? ChatStack : AuthStack}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Chat',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-outline" size={size} color={color} />
+          ),
+          tabBarBadge: unreadChatsCount > 0 ? unreadChatsCount : undefined,
+        }}
+      />
 
-  {/* Profil */}
-  <Tab.Screen
-    name="Profil"
-    component={user ? ProfileStackScreen : AuthStack}
-    options={{
-      headerShown: false,
-      tabBarLabel: 'Profil',
-      tabBarIcon: ({ color, size }) => (
-        <Ionicons name="person-outline" size={size} color={color} />
-      ),
-      tabBarBadge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
-    }}
-  />
-</Tab.Navigator>
-
-
+      {/* Profil */}
+      <Tab.Screen
+        name="Profil"
+        component={user ? ProfileStackScreen : AuthStack}
+        options={{
+          headerShown: false,
+          tabBarLabel: 'Profil',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+          tabBarBadge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
+        }}
+      />
+    </Tab.Navigator>
   );
 };
 

@@ -37,34 +37,40 @@ export default function ChatScreen() {
     const flatListRef = useRef<FlatList>(null);
 
     const loadOtherUserInfo = async () => {
-        try {
-            const profile = await api.getUserPublicProfile(otherUserUuid);
-            setOtherUserName(profile.user?.infosUser?.userName || 'Utilisateur');
-            setOtherUserAvatar(profile.user?.infosUser?.avatar || null);
-        } catch (error) {
-            console.error('Erreur chargement profil:', error);
-            setOtherUserName('Utilisateur');
-        }
-    };
+  try {
+    const profile = await api.getUserPublicProfile(otherUserUuid);
+    setOtherUserName(profile.user?.infosUser?.userName || 'Utilisateur');
+    setOtherUserAvatar(profile.user?.infosUser?.avatar || null);
+  } catch (error: any) {
+    // Silencieux si 401
+    if (error.response?.status !== 401) {
+      console.warn('Erreur chargement profil:', error.message);
+    }
+    setOtherUserName('Utilisateur');
+  }
+};
 
     const loadMessages = async () => {
-        try {
-            const userStr = await AsyncStorage.getItem('user');
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                setCurrentUserUuid(user.uuid);
-            }
+  try {
+    const userStr = await AsyncStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setCurrentUserUuid(user.uuid);
+    }
 
-            const data = await api.getConversationMessages(conversationId);
-            setMessages(data);
-            await api.markConversationAsRead(conversationId);
+    const data = await api.getConversationMessages(conversationId);
+    setMessages(data);
+    await api.markConversationAsRead(conversationId);
 
-        } catch (error) {
-            console.error('Erreur chargement messages:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  } catch (error: any) {
+    // Silencieux si 401
+    if (error.response?.status !== 401) {
+      console.warn('Erreur chargement messages:', error.message);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
     useEffect(() => {
         loadOtherUserInfo();
@@ -80,24 +86,27 @@ export default function ChatScreen() {
     }, [conversationId]);
 
     const handleSendMessage = async () => {
-        const trimmedMessage = newMessage.trim();
-        if (trimmedMessage === '') return;
+  const trimmedMessage = newMessage.trim();
+  if (trimmedMessage === '') return;
 
-        try {
-            setSending(true);
-            await api.sendMessage(conversationId, trimmedMessage);
-            setNewMessage('');
-            await loadMessages();
+  try {
+    setSending(true);
+    await api.sendMessage(conversationId, trimmedMessage);
+    setNewMessage('');
+    await loadMessages();
 
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
-        } catch (error) {
-            console.error('Erreur envoi message:', error);
-        } finally {
-            setSending(false);
-        }
-    };
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  } catch (error: any) {
+    // Silencieux si 401
+    if (error.response?.status !== 401) {
+      console.warn('Erreur envoi message:', error.message);
+    }
+  } finally {
+    setSending(false);
+  }
+};
 
     const renderMessage = ({ item, index }: { item: Message; index: number }) => {
         const isMyMessage = item.senderUuid === currentUserUuid;

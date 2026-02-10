@@ -34,27 +34,33 @@ const ProfileScreen = ({ navigation }: any) => {
   }, [user]);
 
   const loadMyBooks = async () => {
-    try {
-      setLoadingBooks(true);
-      const books = await api.getMyBooks();
-      setMyBooks(books);
-    } catch (error) {
-      console.error('Erreur lors du chargement des livres:', error);
-    } finally {
-      setLoadingBooks(false);
+  try {
+    setLoadingBooks(true);
+    const books = await api.getMyBooks();
+    setMyBooks(books);
+  } catch (error: any) {
+    // Silencieux si 401
+    if (error.response?.status !== 401) {
+      console.warn('Erreur chargement livres:', error.message);
     }
-  };
+  } finally {
+    setLoadingBooks(false);
+  }
+};
 
   const loadUnreadCount = async () => {
-    try {
-      const response = await api.getUnreadNotificationsCount();
-      if (response.success) {
-        setUnreadCount(response.unreadCount);
-      }
-    } catch (error) {
-      console.error('Erreur chargement compteur:', error);
+  try {
+    const response = await api.getUnreadNotificationsCount();
+    if (response.success) {
+      setUnreadCount(response.unreadCount);
     }
-  };
+  } catch (error: any) {
+    // Silencieux si 401
+    if (error.response?.status !== 401) {
+      console.warn('Erreur chargement compteur notifications:', error.message);
+    }
+  }
+};
 
   const handleLogout = () => {
     Alert.alert(
