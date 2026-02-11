@@ -6,6 +6,7 @@ use App\DTO\Book\CreateBookDTO;
 use App\DTO\Book\UpdateBookDTO;
 use App\Entity\User;
 use App\Exception\ResourceNotFoundException;
+use App\Exception\UnauthorizedActionException;
 use App\Repository\BookRepository;
 use App\Service\BookService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -125,6 +126,10 @@ class BookController extends AbstractController
         if (!$user instanceof User) {
             throw $this->createAccessDeniedException('User must be logged in to update a book.');
         }
+        // ✅ Autorise l'admin OU le propriétaire
+        if ($book->getUser() !== $user && !in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+            throw new UnauthorizedActionException('Vous ne pouvez pas modifier ce livre.');
+        }
 
         $book = $this->bookService->updateBook($book, $user, $dto);
 
@@ -147,6 +152,10 @@ class BookController extends AbstractController
         $user = $this->getUser();
         if (!$user instanceof User) {
             throw $this->createAccessDeniedException('User must be logged in to delete a book.');
+        }
+        // ✅ Autorise l'admin OU le propriétaire
+        if ($book->getUser() !== $user && !in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+            throw new UnauthorizedActionException('Vous ne pouvez pas supprimer ce livre.');
         }
 
         $this->bookService->deleteBook($book, $user);

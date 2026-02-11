@@ -4,6 +4,7 @@ import { Book } from '../types/Book';
 import type { Conversation, Message } from '../types/Chat';
 import type { Favorite, FavoriteCheckResponse, FavoriteToggleResponse } from '../types/Favorite';
 import { API_URL } from '../config/apiConfig';
+import { User } from '../types/User';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -14,22 +15,28 @@ const apiClient = axios.create({
 });
 
 // Fonction pour vérifier si une route est publique (pas besoin de token)
-const isPublicRoute = (url?: string): boolean => {
+// Callback pour récupérer la méthode HTTP
+let currentMethod: string | undefined;
+
+const isPublicRoute = (url?: string, method?: string): boolean => {
   if (!url) return false;
   
-  // Routes publiques définies dans security.yaml
   const publicPatterns = [
-    /^\/login$/,                      // POST /api/login
-    /^\/register$/,                   // POST /api/register
-    /^\/books$/,                      // GET /api/books (liste)
-    /^\/books\?/,                     // GET /api/books?page=1 (avec params)
-    /^\/books\/[a-f0-9-]+$/,         // GET /api/books/{uuid} (détail)
-    /^\/password\/reset-request$/,   // POST /api/password/reset-request
-    /^\/password\/reset-confirm$/,   // POST /api/password/reset-confirm
+    /^\/login$/,
+    /^\/register$/,
+    /^\/password\/reset-request$/,
+    /^\/password\/reset-confirm$/,
   ];
+
+  // GET /api/books et GET /api/books/{uuid} sont publics
+  // Mais DELETE /api/books/{uuid} nécessite authentification
+  if (method === 'GET' && (/^\/books$/.test(url) || /^\/books\?/.test(url) || /^\/books\/[a-f0-9-]+$/.test(url))) {
+    return true;
+  }
   
   return publicPatterns.some(pattern => pattern.test(url));
 };
+
 
 // Callback pour déconnexion (sera défini par AuthContext)
 let onTokenExpired: (() => void) | null = null;
@@ -41,11 +48,13 @@ export const setTokenExpiredCallback = (callback: () => void) => {
 // Intercepteur REQUEST
 apiClient.interceptors.request.use(
   async (config) => {
-    if (!isPublicRoute(config.url)) {
+    const method = config.method?.toUpperCase();
+    
+    if (!isPublicRoute(config.url, method)) {
       const token = await AsyncStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('🔑 Token ajouté pour:', config.url);
+        console.log('Token ajouté pour:', config.url);
       }
     } else {
       console.log('🌐 Route publique (pas de token):', config.url);
@@ -278,6 +287,22 @@ export const api = {
   getMyFavorites: async (): Promise<Favorite[]> => {
     const response = await apiClient.get('/favorites');
     return response.data.data;
+  },
+   // ADMIN - Users
+  getAllUsers: async (): Promise<User[]> => {
+    const response = await apiClient.get('/users');
+    return response.data;
+  },
+
+  deleteUser: async (uuid: string) => {
+    const response = await apiClient.delete(`/users/${uuid}`);
+    return response.data;
+  },
+
+  // ADMIN - Books
+  deleteBook: async (uuid: string) => {
+    const response = await apiClient.delete(`/books/${uuid}`);
+    return response.data;
   },
 };
 

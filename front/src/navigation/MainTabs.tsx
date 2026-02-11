@@ -6,6 +6,7 @@ import BookListScreen from '../screens/BookListScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import AuthStack from './AuthStack';
+import AdminStack from './AdminStack';
 import { useAuth } from '../context/AuthContext';
 import BookDetailScreen from '../screens/BookDetailScreen';
 import AddBookScreen from '../screens/AddBookScreen';
@@ -19,11 +20,13 @@ import FavoritesScreen from '../screens/FavoritesScreen';
 import ChatScreen from '../screens/ChatScreen';
 import { Ionicons } from '@expo/vector-icons';
 
+
 const Tab = createBottomTabNavigator();
 const ProfileStack = createStackNavigator();
 const BookStack = createStackNavigator();
 const ExchangeStack = createStackNavigator();
 const ChatStackNav = createStackNavigator();
+
 
 // Pour les livres
 function BookStackScreen() {
@@ -63,6 +66,7 @@ function BookStackScreen() {
   );
 }
 
+
 // Pour les échanges
 function ExchangeStackScreen() {
   return (
@@ -75,6 +79,7 @@ function ExchangeStackScreen() {
     </ExchangeStack.Navigator>
   );
 }
+
 
 // Pour le profil
 function ProfileStackScreen() {
@@ -114,6 +119,7 @@ function ProfileStackScreen() {
   );
 }
 
+
 // pour le chat
 function ChatStack() {
   return (
@@ -132,10 +138,15 @@ function ChatStack() {
   );
 }
 
+
 const MainTabs = () => {
   const { user } = useAuth();
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+
+  // Vérifier si l'utilisateur est admin
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+
 
   // Fonction pour charger le compteur de conversations non lues
   const loadUnreadChatsCount = async () => {
@@ -149,15 +160,14 @@ const MainTabs = () => {
       setUnreadChatsCount(count);
     } catch (error: any) {
       if (error.response?.status === 401) {
-        // Silencieux (déconnexion automatique en cours)
         console.log('Token expiré lors du chargement chat count');
         setUnreadChatsCount(0);
       } else {
-        // Afficher uniquement les VRAIES erreurs
         console.warn('Erreur chargement compteur chat:', error.message);
       }
     }
   };
+
 
   // Fonction pour charger le compteur de notifications non lues
   const loadUnreadNotificationsCount = async () => {
@@ -172,15 +182,14 @@ const MainTabs = () => {
       setUnreadNotificationsCount(data.unreadCount || 0);
     } catch (error: any) {
       if (error.response?.status === 401) {
-        // Silencieux (déconnexion automatique en cours)
         console.log('Token expiré lors du chargement notifications count');
         setUnreadNotificationsCount(0);
       } else {
-        // Afficher uniquement les VRAIES erreurs
         console.warn('Erreur chargement compteur notifications:', error.message);
       }
     }
   };
+
 
   // Charge au démarrage
   useEffect(() => {
@@ -190,6 +199,7 @@ const MainTabs = () => {
     }
   }, [user]);
 
+
   // Polling toutes les 30 secondes
   useEffect(() => {
     if (!user) return;
@@ -197,10 +207,11 @@ const MainTabs = () => {
     const interval = setInterval(() => {
       loadUnreadChatsCount();
       loadUnreadNotificationsCount();
-    }, 30000); // 30 secondes
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [user]);
+
 
   return (
     <Tab.Navigator>
@@ -244,8 +255,24 @@ const MainTabs = () => {
           tabBarBadge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
         }}
       />
+
+      {/* ✅ ONGLET ADMIN (conditionnel) */}
+      {isAdmin && (
+        <Tab.Screen
+          name="Admin"
+          component={AdminStack}
+          options={{
+            headerShown: false,
+            tabBarLabel: 'Admin',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="shield-checkmark" size={size} color={color} />
+            ),
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 };
+
 
 export default MainTabs;
