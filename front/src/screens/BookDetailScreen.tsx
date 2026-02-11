@@ -191,16 +191,45 @@ export default function BookDetailScreen() {
   };
 
   const handleRequestExchange = async () => {
-    if (!user) {
-      Alert.alert('Connexion requise', 'Vous devez être connecté pour demander un échange');
+  if (!user) {
+    Alert.alert('Connexion requise', 'Vous devez être connecté pour demander un échange');
+    return;
+  }
+
+  if (!book) return;
+
+  // ✅ VÉRIFICATION : L'utilisateur a-t-il au moins un livre actif ?
+  try {
+    const myBooks = await api.getMyBooks();
+    const activeBooks = myBooks.filter(b => b.bookStatus === 'active');
+
+    if (activeBooks.length === 0) {
+      Alert.alert(
+        'Aucun livre disponible',
+        'Pour demander un échange, vous devez avoir au moins un livre actif dans votre bibliothèque.',
+        [
+          {
+            text: 'Ajouter un livre',
+            onPress: () => {
+              // Navigate vers l'écran d'ajout de livre
+              navigation.getParent()?.navigate('Livres', {
+                screen: 'AddBook'
+              });
+            },
+          },
+          {
+            text: 'Annuler',
+            style: 'cancel',
+          },
+        ]
+      );
       return;
     }
 
-    if (!book) return;
-
+    // ✅ L'utilisateur a des livres actifs, on continue
     Alert.alert(
       'Demander un échange',
-      `Voulez-vous demander "${book.title}" ?`,
+      `Voulez-vous demander "${book.title}" ?\n\nVous avez ${activeBooks.length} livre(s) disponible(s) à proposer en échange.`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -212,7 +241,7 @@ export default function BookDetailScreen() {
                 return;
               }
 
-              const response = await api.createExchange(book.id);
+              await api.createExchange(book.id);
 
               Alert.alert(
                 'Demande envoyée !',
@@ -239,7 +268,16 @@ export default function BookDetailScreen() {
         },
       ]
     );
-  };
+
+  } catch (error: any) {
+    // ✅ Gestion silencieuse des erreurs 401
+    if (error.response?.status !== 401) {
+      console.warn('⚠️ Erreur vérification livres disponibles:', error.message);
+      Alert.alert('Erreur', 'Impossible de vérifier vos livres disponibles');
+    }
+  }
+};
+
 
   if (loading) {
     return (

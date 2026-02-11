@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, Modal,
 } from 'react-native';
@@ -7,10 +7,12 @@ import { useNavigation } from '@react-navigation/native';
 import { bookService, CreateBookData, BookCategorie, BookState, ExchangeType } from '../services/bookService';
 import { BOOK_CATEGORIES, BOOK_STATES, EXCHANGE_TYPES } from '../constants/bookOptions';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AddBookScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
 
   // états pour les champs du formulaire
   const [title, setTitle] = useState('');
@@ -34,6 +36,65 @@ export default function AddBookScreen() {
 
   // état de chargement
   const [loading, setLoading] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+
+  // ✅ VÉRIFICATION DU PROFIL AU CHARGEMENT
+  useEffect(() => {
+    checkUserProfile();
+  }, []);
+
+  const checkUserProfile = async () => {
+    try {
+      const userStr = await AsyncStorage.getItem('user');
+      if (!userStr) {
+        Alert.alert('Erreur', 'Utilisateur non connecté');
+        navigation.goBack();
+        return;
+      }
+
+      const currentUser = JSON.parse(userStr);
+
+      // ✅ Vérifier si le profil est complet
+      const hasUserName = currentUser.infosUser?.userName;
+      const hasCity = currentUser.infosUser?.city;
+      const hasPhoneNumber = currentUser.infosUser?.phoneNumber;
+      const hasBirthDate = currentUser.infosUser?.birthDate;
+
+      const isProfileComplete = hasUserName && hasCity && hasPhoneNumber && hasBirthDate;
+
+      if (!isProfileComplete) {
+        Alert.alert(
+          'Profil incomplet',
+          'Pour ajouter un livre, vous devez d\'abord compléter votre profil (nom d\'utilisateur, ville, téléphone et date de naissance).',
+          [
+            {
+              text: 'Compléter mon profil',
+              onPress: () => {
+                // Navigation vers le ProfileStack puis EditProfile
+                navigation.getParent()?.navigate('Profil', {
+                  screen: 'EditProfile'
+                });
+              },
+            },
+
+            {
+              text: 'Plus tard',
+              style: 'cancel',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+        return;
+      }
+
+      setCheckingProfile(false);
+
+    } catch (error: any) {
+      console.warn('⚠️ Erreur vérification profil:', error.message);
+      Alert.alert('Erreur', 'Impossible de vérifier votre profil');
+      navigation.goBack();
+    }
+  };
 
   // sélectionner une image
   const pickImage = async (type: 'front' | 'back') => {
@@ -174,52 +235,60 @@ export default function AddBookScreen() {
         },
       ]);
     } catch (error: any) {
-  console.error('Erreur lors de la création du livre:', error);
-  
-  // ✅ Extraction détaillée de l'erreur
-  let errorMessage = 'Une erreur est survenue';
-  
-  if (error.response?.data) {
-    const data = error.response.data;
-    
-    // Si l'erreur contient un message direct
-    if (data.message) {
-      errorMessage = data.message;
-    }
-    // Si l'erreur contient des violations de contraintes (Symfony)
-    else if (data.violations && Array.isArray(data.violations)) {
-      errorMessage = data.violations
-        .map((v: any) => `${v.propertyPath}: ${v.message}`)
-        .join('\n');
-    }
-    // Si l'erreur contient un tableau d'erreurs
-    else if (data.errors) {
-      if (Array.isArray(data.errors)) {
-        errorMessage = data.errors.join('\n');
-      } else if (typeof data.errors === 'object') {
-        errorMessage = Object.entries(data.errors)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join('\n');
-      }
-    }
-    // Si l'erreur contient un détail
-    else if (data.detail) {
-      errorMessage = data.detail;
-    }
-  }
-  
-  // Affichage de l'erreur à l'utilisateur
-  Alert.alert('Erreur', errorMessage);
-} finally {
-  setLoading(false);
-}
+      console.error('Erreur lors de la création du livre:', error);
 
+      // ✅ Extraction détaillée de l'erreur
+      let errorMessage = 'Une erreur est survenue';
+
+      if (error.response?.data) {
+        const data = error.response.data;
+
+        // Si l'erreur contient un message direct
+        if (data.message) {
+          errorMessage = data.message;
+        }
+        // Si l'erreur contient des violations de contraintes (Symfony)
+        else if (data.violations && Array.isArray(data.violations)) {
+          errorMessage = data.violations
+            .map((v: any) => `${v.propertyPath}: ${v.message}`)
+            .join('\n');
+        }
+        // Si l'erreur contient un tableau d'erreurs
+        else if (data.errors) {
+          if (Array.isArray(data.errors)) {
+            errorMessage = data.errors.join('\n');
+          } else if (typeof data.errors === 'object') {
+            errorMessage = Object.entries(data.errors)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('\n');
+          }
+        }
+        // Si l'erreur contient un détail
+        else if (data.detail) {
+          errorMessage = data.detail;
+        }
+      }
+
+      // Affichage de l'erreur à l'utilisateur
+      Alert.alert('Erreur', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // ✅ Afficher un loader pendant la vérification du profil
+  if (checkingProfile) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={styles.loadingText}>Vérification du profil...</Text>
+      </View>
+    );
+  }
+
   return (
-    
     <ScrollView style={styles.container}>
-           {/* Illustration */}
+      {/* Illustration */}
       <View style={styles.illustrationContainer}>
         <Image
           source={require('../../assets/images/image-ajout-form.png')}
@@ -311,13 +380,13 @@ export default function AddBookScreen() {
 
       {/* État du livre - DROPDOWN */}
       <Text style={styles.label}>État du livre *</Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.selectButton}
         onPress={() => setShowStateModal(true)}
       >
         <Text style={[styles.selectButtonText, !selectedState && styles.placeholderText]}>
-          {selectedState 
-            ? BOOK_STATES.find(s => s.value === selectedState)?.label 
+          {selectedState
+            ? BOOK_STATES.find(s => s.value === selectedState)?.label
             : 'Neuf'}
         </Text>
         <Ionicons name="chevron-down" size={20} color="#666" />
@@ -325,7 +394,7 @@ export default function AddBookScreen() {
 
       {/* Catégorie - DROPDOWN */}
       <Text style={styles.label}>Catégorie</Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.selectButton}
         onPress={() => setShowCategoryModal(true)}
       >
@@ -368,7 +437,7 @@ export default function AddBookScreen() {
 
       {/* Image back */}
       <TouchableOpacity style={styles.imagePickerButton} onPress={() => pickImage('back')}>
-        <Text style={styles.imagePickerText}>Image de couverture avant</Text>
+        <Text style={styles.imagePickerText}>Image de couverture arrière</Text>
         <Ionicons name="camera" size={24} color="#666" />
       </TouchableOpacity>
       {backImageUri && <Image source={{ uri: backImageUri }} style={styles.imagePreview} />}
@@ -413,7 +482,7 @@ export default function AddBookScreen() {
                 )}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setShowStateModal(false)}
             >
@@ -445,7 +514,7 @@ export default function AddBookScreen() {
                 )}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => setShowCategoryModal(false)}
             >
@@ -465,7 +534,17 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
   },
-  
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
@@ -473,7 +552,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#000',
   },
-
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -481,7 +559,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#000',
   },
-
   input: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -490,14 +567,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#FAFAFA',
   },
-
   textArea: {
     height: 100,
     textAlignVertical: 'top',
     paddingTop: 15,
   },
-
-  // Dropdown/Select button
   selectButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -515,7 +589,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: '#CCC',
   },
-
   checkboxContainer: {
     marginTop: 10,
     marginBottom: 10,
@@ -530,7 +603,6 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 10,
   },
-
   imagePickerButton: {
     backgroundColor: '#F5F5F5',
     padding: 16,
@@ -542,13 +614,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-
   imagePickerText: {
     fontSize: 15,
     color: '#333',
     flex: 1,
   },
-
   imagePreview: {
     width: '100%',
     height: 200,
@@ -557,7 +627,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
-
   submitButton: {
     backgroundColor: '#4CAF50',
     padding: 16,
@@ -570,18 +639,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-
   submitButtonDisabled: {
     backgroundColor: '#ccc',
     opacity: 0.6,
   },
-
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-
   illustrationContainer: {
     alignItems: 'center',
     marginBottom: 20,
@@ -590,15 +656,6 @@ const styles = StyleSheet.create({
     width: 250,
     height: 180,
   },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    padding: 10,
-    zIndex: 10,
-  },
-
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
