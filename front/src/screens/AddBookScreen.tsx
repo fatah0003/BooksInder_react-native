@@ -9,6 +9,7 @@ import { BOOK_CATEGORIES, BOOK_STATES, EXCHANGE_TYPES } from '../constants/bookO
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { googleBooksService } from '../services/googleBooksService';
 
 export default function AddBookScreen() {
   const navigation = useNavigation();
@@ -25,18 +26,17 @@ export default function AddBookScreen() {
   const [selectedCategories, setSelectedCategories] = useState<BookCategorie[]>([]);
   const [selectedState, setSelectedState] = useState<BookState | null>(null);
   const [selectedExchangeTypes, setSelectedExchangeTypes] = useState<ExchangeType[]>([]);
-
   // états pour les modales
   const [showStateModal, setShowStateModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-
   // états pour les images
   const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
   const [backImageUri, setBackImageUri] = useState<string | null>(null);
-
   // état de chargement
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(true);
+  // État pour la recherche ISBN
+  const [searchingIsbn, setSearchingIsbn] = useState(false);
 
   // ✅ VÉRIFICATION DU PROFIL AU CHARGEMENT
   useEffect(() => {
@@ -276,7 +276,48 @@ export default function AddBookScreen() {
     }
   };
 
-  // ✅ Afficher un loader pendant la vérification du profil
+  // Recherche automatique par ISBN avec Google Books API
+  const handleIsbnSearch = async (isbnValue: string) => {
+    // Ne rechercher que si l'ISBN fait 10 ou 13 caractères
+    if (isbnValue.length !== 10 && isbnValue.length !== 13) {
+      return;
+    }
+
+    try {
+      setSearchingIsbn(true);
+
+      const bookData = await googleBooksService.searchByIsbn(isbnValue);
+
+      if (bookData) {
+        // Pré-remplir les champs
+        if (bookData.title) setTitle(bookData.title);
+        if (bookData.author) setAuthor(bookData.author);
+        if (bookData.description) setDescription(bookData.description);
+        if (bookData.pages) setPages(bookData.pages.toString());
+        if (bookData.publisher) setEdition(bookData.publisher);
+
+        Alert.alert(
+          'Livre trouvé !',
+          `Les informations de "${bookData.title}" ont été pré-remplies. Vous pouvez les modifier si nécessaire.`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Aucun résultat',
+          'Aucun livre trouvé pour cet ISBN. Veuillez remplir les informations manuellement.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error: any) {
+      console.warn('Erreur recherche ISBN:', error.message);
+      // Ne pas bloquer l'utilisateur
+    } finally {
+      setSearchingIsbn(false);
+    }
+  };
+
+
+  // Afficher un loader pendant la vérification du profil
   if (checkingProfile) {
     return (
       <View style={styles.centerContainer}>
@@ -299,16 +340,36 @@ export default function AddBookScreen() {
 
       <Text style={styles.title}>Ajouter un Livre</Text>
 
-      {/* ISBN */}
-      <Text style={styles.label}>ISBN *</Text>
-      <TextInput
-        style={styles.input}
-        value={isbn}
-        onChangeText={setIsbn}
-        placeholder="Ex : 1524759783"
-        placeholderTextColor="#CCC"
-        maxLength={20}
-      />
+      {/* ISBN avec recherche automatique */}
+      <Text style={styles.label}>ISBN * (recherche automatique)</Text>
+      <View style={styles.isbnContainer}>
+        <TextInput
+          style={[styles.input, styles.isbnInput]}
+          value={isbn}
+          onChangeText={(text) => {
+            setIsbn(text);
+            // Déclencher la recherche automatiquement
+            if (text.length === 10 || text.length === 13) {
+              handleIsbnSearch(text);
+            }
+          }}
+          placeholder="Ex : 9782253933571 ou 1524759783"
+          placeholderTextColor="#CCC"
+          keyboardType="numeric"
+          maxLength={13}
+        />
+        {searchingIsbn && (
+          <ActivityIndicator
+            size="small"
+            color="#4CAF50"
+            style={styles.isbnLoader}
+          />
+        )}
+      </View>
+      {searchingIsbn && (
+        <Text style={styles.isbnSearchText}>🔍 Recherche en cours...</Text>
+      )}
+
 
       {/* Titre */}
       <Text style={styles.label}>Titre *</Text>
@@ -697,5 +758,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  // isbn
+  isbnContainer: {
+    position: 'relative',
+  },
+  isbnInput: {
+    paddingRight: 50, // Espace pour le loader
+  },
+  isbnLoader: {
+    position: 'absolute',
+    right: 15,
+    top: 15,
+  },
+  isbnSearchText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginTop: 5,
+    fontStyle: 'italic',
   },
 });
