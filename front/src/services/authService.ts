@@ -72,7 +72,10 @@ export const authService = {
   },
   
   // Supprimer le compte utilisateur
-  deleteAccount: async (uuid: string): Promise<void> => {
-    await apiClient.delete(`/users/${uuid}`);
-  },
+  deleteAccount: async (uuid: string, password: string): Promise<void> => {
+  await apiClient.delete(`/users/${uuid}`, {
+    data: { password }
+  });
+},
+
 };

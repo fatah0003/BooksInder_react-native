@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[Route('/api/users', name: 'api_users_')]
 class UserController extends AbstractController
@@ -22,7 +23,8 @@ class UserController extends AbstractController
         private readonly UserService $userService,
         private readonly SerializerInterface $serializer,
         private readonly UserRepository $userRepository,
-        private readonly BookRepository $bookRepository
+        private readonly BookRepository $bookRepository,
+        private readonly UserPasswordHasherInterface $passwordHasher
     ) {
     }
 
@@ -91,7 +93,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/{uuid}', name: 'delete', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['DELETE'])]
-    public function delete(string $uuid): JsonResponse
+    public function delete(string $uuid, Request $request): JsonResponse
     {
         $user = $this->userRepository->findOneByUuid($uuid);
 
@@ -104,6 +106,28 @@ class UserController extends AbstractController
             throw new UnauthorizedActionException('Accès refusé');
         }
 
+        // ✅ NOUVEAU : Si c'est un user normal qui supprime son propre compte, vérifier le mot de passe
+        if ($currentUser === $user && !in_array('ROLE_ADMIN', $currentUser->getRoles(), true)) {
+            $data = json_decode($request->getContent(), true);
+            $password = $data['password'] ?? null;
+
+            if (!$password) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le mot de passe est requis pour supprimer votre compte'
+                ], 400);
+            }
+
+            // Vérifier que le mot de passe est correct
+            if (!$this->passwordHasher->isPasswordValid($user, $password)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Mot de passe incorrect'
+                ], 401);
+            }
+        }
+
+        // Si tout est OK, supprimer le compte
         $this->userService->delete($user);
 
         return $this->json([
@@ -111,6 +135,7 @@ class UserController extends AbstractController
             'message' => 'Utilisateur supprimé'
         ]);
     }
+
 
     // Méthode pour afficher les infos public d'un prifil
     #[Route('/{uuid}/public-profile', name: 'public_profile', requirements: ['uuid' => '[0-9a-f-]{36}'], methods: ['GET'])]

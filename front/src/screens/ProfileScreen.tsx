@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,6 +13,8 @@ const ProfileScreen = ({ navigation }: any) => {
   const [myBooks, setMyBooks] = useState<Book[]>([]);
   const [loadingBooks, setLoadingBooks] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -34,33 +36,33 @@ const ProfileScreen = ({ navigation }: any) => {
   }, [user]);
 
   const loadMyBooks = async () => {
-  try {
-    setLoadingBooks(true);
-    const books = await api.getMyBooks();
-    setMyBooks(books);
-  } catch (error: any) {
-    // Silencieux si 401
-    if (error.response?.status !== 401) {
-      console.warn('Erreur chargement livres:', error.message);
+    try {
+      setLoadingBooks(true);
+      const books = await api.getMyBooks();
+      setMyBooks(books);
+    } catch (error: any) {
+      // Silencieux si 401
+      if (error.response?.status !== 401) {
+        console.warn('Erreur chargement livres:', error.message);
+      }
+    } finally {
+      setLoadingBooks(false);
     }
-  } finally {
-    setLoadingBooks(false);
-  }
-};
+  };
 
   const loadUnreadCount = async () => {
-  try {
-    const response = await api.getUnreadNotificationsCount();
-    if (response.success) {
-      setUnreadCount(response.unreadCount);
+    try {
+      const response = await api.getUnreadNotificationsCount();
+      if (response.success) {
+        setUnreadCount(response.unreadCount);
+      }
+    } catch (error: any) {
+      // Silencieux si 401
+      if (error.response?.status !== 401) {
+        console.warn('Erreur chargement compteur notifications:', error.message);
+      }
     }
-  } catch (error: any) {
-    // Silencieux si 401
-    if (error.response?.status !== 401) {
-      console.warn('Erreur chargement compteur notifications:', error.message);
-    }
-  }
-};
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -95,28 +97,47 @@ const ProfileScreen = ({ navigation }: any) => {
         style: 'cancel',
       },
       {
-        text: 'Supprimer',
+        text: 'Continuer',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            if (user?.uuid) {
-              await authService.deleteAccount(user.uuid);
-              Alert.alert('Compte supprimé', 'Votre compte a été supprimé avec succès.');
-              await logout();
-            }
-          } catch (error: any) {
-            Alert.alert(
-              'Erreur',
-              error.response?.data?.message || 'Impossible de supprimer le compte'
-            );
-          }
+        onPress: () => {
+          // Ouvrir le modal pour demander le mot de passe
+          setShowPasswordModal(true);
         },
       },
     ]
   );
 };
 
+// AJOUTE CETTE NOUVELLE FONCTION
+const confirmDeleteAccount = async () => {
+  // Vérifier que le mot de passe n'est pas vide
+  if (!password || password.trim() === '') {
+    Alert.alert('Erreur', 'Le mot de passe est requis');
+    return;
+  }
 
+  try {
+    if (user?.uuid) {
+      // Fermer le modal
+      setShowPasswordModal(false);
+      
+      // Supprimer le compte avec le mot de passe
+      await authService.deleteAccount(user.uuid, password);
+      
+      // Réinitialiser le champ mot de passe
+      setPassword('');
+      
+      Alert.alert('Compte supprimé', 'Votre compte a été supprimé avec succès.');
+      await logout();
+    }
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || 'Impossible de supprimer le compte';
+    Alert.alert('Erreur', errorMessage);
+    
+    // Réinitialiser le mot de passe en cas d'erreur
+    setPassword('');
+  }
+};
 
   const handleBookPress = (bookUuid: string) => {
     navigation.getParent()?.navigate('Livres', {
@@ -321,6 +342,53 @@ const ProfileScreen = ({ navigation }: any) => {
           <View style={{ height: 50 }} />
         </>
       )}
+      {/* ✅ AJOUTE CE MODAL ICI (AVANT </ScrollView>) */}
+      <Modal
+        visible={showPasswordModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowPasswordModal(false);
+          setPassword('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirmation requise</Text>
+            <Text style={styles.modalDescription}>
+              Pour supprimer votre compte, veuillez entrer votre mot de passe :
+            </Text>
+            
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Mot de passe"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              autoFocus
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelModalButton}
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setPassword('');
+                }}
+              >
+                <Text style={styles.cancelModalButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.deleteModalButton}
+                onPress={confirmDeleteAccount}
+              >
+                <Text style={styles.deleteModalButtonText}>Supprimer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -492,7 +560,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   // Row normale pour les autres infos
-  
+
   meTag: {
     backgroundColor: '#F5F5F5',
     paddingHorizontal: 12,
@@ -678,23 +746,94 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   // Me row avec icône
-meRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 8,
-},
-meIcon: {
-  marginRight: 6,
-},
-// Trait séparateur
-divider: {
-  height: 2,
-  backgroundColor: '#E0E0E0',
-  marginHorizontal: 20,
-  marginVertical: 20,
-},
-
-
+  meRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  meIcon: {
+    marginRight: 6,
+  },
+  // Trait séparateur
+  divider: {
+    height: 2,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 20,
+    marginVertical: 20,
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: '#F5F5F5',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cancelModalButton: {
+    flex: 1,
+    backgroundColor: '#E0E0E0',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelModalButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteModalButton: {
+    flex: 1,
+    backgroundColor: '#FF3B30',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  deleteModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default ProfileScreen;

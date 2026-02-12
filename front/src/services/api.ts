@@ -14,10 +14,7 @@ const apiClient = axios.create({
   timeout: 10000,
 });
 
-// Fonction pour vérifier si une route est publique (pas besoin de token)
-// Callback pour récupérer la méthode HTTP
-let currentMethod: string | undefined;
-
+// Fonction pour vérifier si une route est publique
 const isPublicRoute = (url?: string, method?: string): boolean => {
   if (!url) return false;
   
@@ -28,15 +25,13 @@ const isPublicRoute = (url?: string, method?: string): boolean => {
     /^\/password\/reset-confirm$/,
   ];
 
-  // GET /api/books et GET /api/books/{uuid} sont publics
-  // Mais DELETE /api/books/{uuid} nécessite authentification
+  // GET /api/books est public
   if (method === 'GET' && (/^\/books$/.test(url) || /^\/books\?/.test(url) || /^\/books\/[a-f0-9-]+$/.test(url))) {
     return true;
   }
   
   return publicPatterns.some(pattern => pattern.test(url));
 };
-
 
 // Callback pour déconnexion (sera défini par AuthContext)
 let onTokenExpired: (() => void) | null = null;
@@ -45,7 +40,7 @@ export const setTokenExpiredCallback = (callback: () => void) => {
   onTokenExpired = callback;
 };
 
-// Intercepteur REQUEST
+// Intercepteur REQUEST : Ajouter le token
 apiClient.interceptors.request.use(
   async (config) => {
     const method = config.method?.toUpperCase();
@@ -64,40 +59,30 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Intercepteur RESPONSE (avec déconnexion automatique)
+// Intercepteur RESPONSE : Gérer les erreurs 401
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      console.log('Token expiré détecté (401)');
-      
-      // Supprimer les données locales
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('user');
-      
-      // Appeler le callback pour déconnecter dans AuthContext
-      if (onTokenExpired) {
-        console.log('Déconnexion automatique déclenchée');
-        onTokenExpired();
-      }
-    }
+    // ✅ Cas spécial : erreur de mot de passe lors de la suppression de compte
+    const isDeleteAccountPasswordError = 
+      error.config?.url?.includes('/users/') && 
+      error.config?.method === 'delete' &&
+      error.response?.status === 401;
     
-    return Promise.reject(error);
-  }
-);
-
-// Intercepteur RESPONSE : Gérer les erreurs 401 (token expiré)
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
+    // Si c'est une erreur 401 MAIS PAS une erreur de mot de passe
+    if (error.response?.status === 401 && !isDeleteAccountPasswordError) {
       console.log('Token expiré détecté (401), nettoyage des données locales');
       
       // Supprimer les données locales
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('user');
+      delete apiClient.defaults.headers.common['Authorization'];
       
-      // La déconnexion sera gérée par AuthContext lors du prochain refresh
+      // Déclencher la déconnexion dans AuthContext
+      if (onTokenExpired) {
+        console.log('Déconnexion automatique déclenchée');
+        onTokenExpired();
+      }
     }
     
     return Promise.reject(error);
@@ -144,7 +129,6 @@ export const api = {
   // détails livre
   getBookDetail: async (uuid: string): Promise<Book> => {
     const response = await apiClient.get(`/books/${uuid}`);
-    console.log('Response complète:', response.data);
     return response.data.data || response.data;
   },
 
@@ -288,7 +272,8 @@ export const api = {
     const response = await apiClient.get('/favorites');
     return response.data.data;
   },
-   // ADMIN - Users
+
+  // ADMIN - Users
   getAllUsers: async (): Promise<User[]> => {
     const response = await apiClient.get('/users');
     return response.data;
