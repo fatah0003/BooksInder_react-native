@@ -86,35 +86,37 @@ const ProfileScreen = ({ navigation }: any) => {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Supprimer le compte',
-      'Cette action est irréversible. Toutes vos données seront définitivement supprimées.\n\nÊtes-vous sûr de vouloir continuer ?',
-      [
-        {
-          text: 'Annuler',
-          style: 'cancel',
-        },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (user?.uuid) {
-                await authService.deleteAccount(user.uuid);
-                Alert.alert('Compte supprimé', 'Votre compte a été supprimé avec succès.');
-                await logout();
-              }
-            } catch (error: any) {
-              Alert.alert(
-                'Erreur',
-                error.response?.data?.message || 'Impossible de supprimer le compte'
-              );
+  Alert.alert(
+    'Supprimer le compte',
+    'Cette action est irréversible. Toutes vos données seront définitivement supprimées.\n\nÊtes-vous sûr de vouloir continuer ?',
+    [
+      {
+        text: 'Annuler',
+        style: 'cancel',
+      },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            if (user?.uuid) {
+              await authService.deleteAccount(user.uuid);
+              Alert.alert('Compte supprimé', 'Votre compte a été supprimé avec succès.');
+              await logout();
             }
-          },
+          } catch (error: any) {
+            Alert.alert(
+              'Erreur',
+              error.response?.data?.message || 'Impossible de supprimer le compte'
+            );
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
+
+
 
   const handleBookPress = (bookUuid: string) => {
     navigation.getParent()?.navigate('Livres', {

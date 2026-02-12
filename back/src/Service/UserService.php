@@ -92,8 +92,24 @@ class UserService
     public function delete(User $user): void
     {
         $id = $user->getId();
-        $this->em->remove($user);
+
+        // Supprimer les livres
+        $books = $user->getBooks()->toArray();  // ← Avec ->toArray()
+        foreach ($books as $book) {
+            $this->em->remove($book);
+        }
+
+        // Changer le statut
+        $user->setUserStatus(UserStatusEnum::DELETED);
+        $user->setUpdatedAt(new \DateTimeImmutable());
+
+        // Flush
         $this->em->flush();
-        $this->logger->info('User deleted', ['userId' => $id]);
+
+        $this->logger->info('User marked as deleted (soft delete)', ['userId' => $id]);
     }
+
+
+
+
 }

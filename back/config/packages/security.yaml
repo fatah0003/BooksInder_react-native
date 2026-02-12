@@ -6,9 +6,8 @@ security:
     # Fournisseur d'utilisateurs
     providers:
         app_user_provider:
-            entity:
-                class: App\Entity\User
-                property: email
+            id: App\Security\UserProvider
+
 
     # Firewalls
     firewalls:

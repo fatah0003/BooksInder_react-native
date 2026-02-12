@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\User;
+use App\Enum\UserStatusEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
@@ -44,6 +45,22 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->getQuery()
             ->getOneOrNullResult();
     }
+    /**
+     * Trouve un user actif par email (exclut les users DELETED et BLOCKED)
+     */
+    public function findOneActiveByEmail(string $email): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.email = :email')
+            ->andWhere('u.userStatus != :deleted')
+            ->andWhere('u.userStatus != :blocked')
+            ->setParameter('email', $email)
+            ->setParameter('deleted', UserStatusEnum::DELETED)
+            ->setParameter('blocked', UserStatusEnum::BLOCKED)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
 
 
 //    /**

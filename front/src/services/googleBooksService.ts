@@ -1,5 +1,8 @@
 const GOOGLE_BOOKS_API = 'https://www.googleapis.com/books/v1/volumes';
 
+const GOOGLE_API_KEY = 'AIzaSyBHRj6iUtXolHGErB6P2kWAGZKEvaNN-Zk';
+
+
 export interface GoogleBookInfo {
   title: string | null;
   author: string | null;
@@ -11,14 +14,38 @@ export interface GoogleBookInfo {
   thumbnail: string | null;
 }
 
+// Fonction helper pour attendre (gestion du rate limiting)
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const googleBooksService = {
-  searchByIsbn: async (isbn: string): Promise<GoogleBookInfo | null> => {
+  searchByIsbn: async (isbn: string, retries = 2): Promise<GoogleBookInfo | null> => {
     try {
       // Nettoyer l'ISBN (enlever tirets et espaces)
       const cleanIsbn = isbn.replace(/[-\s]/g, '');
       
-      // Appel direct à l'API Google
-      const response = await fetch(`${GOOGLE_BOOKS_API}?q=isbn:${cleanIsbn}`);
+      // Construire l'URL avec ou sans clé API
+      const url = GOOGLE_API_KEY 
+        ? `${GOOGLE_BOOKS_API}?q=isbn:${cleanIsbn}&key=${GOOGLE_API_KEY}`
+        : `${GOOGLE_BOOKS_API}?q=isbn:${cleanIsbn}`;
+      
+      // Appel à l'API Google
+      const response = await fetch(url);
+      
+      // ✅ GESTION SPÉCIFIQUE DU 429 (Too Many Requests)
+      if (response.status === 429) {
+        console.warn('⚠️ Erreur 429: Limite de requêtes atteinte');
+        
+        if (retries > 0) {
+          const waitTime = (3 - retries) * 2000; // 2s, puis 4s
+          console.log(`⏳ Réessai dans ${waitTime / 1000} secondes...`);
+          await sleep(waitTime);
+          return googleBooksService.searchByIsbn(isbn, retries - 1);
+        }
+        
+        // Si plus de retries, retourner null
+        console.warn('❌ Impossible de contacter l\'API après plusieurs tentatives');
+        return null;
+      }
       
       if (!response.ok) {
         console.warn('Erreur API Google Books:', response.status);
@@ -29,7 +56,7 @@ export const googleBooksService = {
       
       // Vérifier qu'on a des résultats
       if (!data.items || data.items.length === 0) {
-        console.log('Aucun livre trouvé pour ISBN:', isbn);
+        console.log('Aucun livre trouvé pour ISBN:', cleanIsbn);
         return null;
       }
       

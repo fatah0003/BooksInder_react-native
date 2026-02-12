@@ -18,21 +18,15 @@ export default function AdminUsersScreen() {
   try {
     setLoading(true);
     const response = await api.getAllUsers();
-    console.log('Response brute:', response); // Debug
-    
-    // Gérer différents formats de réponse
     const usersData = response.data || response.users || response;
-    console.log('Users extraits:', usersData);
-    
     setUsers(Array.isArray(usersData) ? usersData : []);
   } catch (error: any) {
-    console.error('Erreur complète:', error);
-    console.error('Response:', error.response?.data);
     Alert.alert('Erreur', error.response?.data?.message || 'Impossible de charger les utilisateurs');
   } finally {
     setLoading(false);
   }
 };
+
 
 
   const handleDeleteUser = (uuid: string, email: string) => {
@@ -79,6 +73,13 @@ export default function AdminUsersScreen() {
               <View style={styles.adminBadge}>
                 <Ionicons name="shield-checkmark" size={14} color="#FFF" />
                 <Text style={styles.adminBadgeText}>Admin</Text>
+              </View>
+            )}
+            {/* ✅ AJOUTE ÇA ICI */}
+            {item.userStatus === 'deleted' && (
+              <View style={styles.deletedBadge}>
+                <Ionicons name="trash" size={14} color="#FFF" />
+                <Text style={styles.deletedBadgeText}>Supprimé</Text>
               </View>
             )}
           </View>
@@ -223,4 +224,19 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 10,
   },
+  deletedBadge: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#EF4444',
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+  borderRadius: 12,
+  marginLeft: 5,
+},
+deletedBadgeText: {
+  fontSize: 11,
+  color: '#FFF',
+  fontWeight: '600',
+  marginLeft: 4,
+},
 });
