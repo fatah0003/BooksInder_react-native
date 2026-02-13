@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Platform
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { infosUserService } from '../services/infosUserService';
 
-
-export default function EditProfileScreen({ navigation }: any) {
+export default function EditProfileScreen({ navigation, route }: any) {
   const { user, refreshUser } = useAuth();
+  const isFirstTime = route?.params?.isFirstTime || false;
+
 
   // FONCTIONS DE CONVERSION
   const convertISOtoFR = (isoDate: string): string => {
@@ -46,15 +38,11 @@ export default function EditProfileScreen({ navigation }: any) {
 
   // AUTO-FORMATAGE DE LA DATE PENDANT LA SAISIE
   const handleBirthDateChange = (text: string) => {
-    // Supprimer tout sauf les chiffres
     let cleaned = text.replace(/\D/g, '');
 
-    // Limiter à 8 chiffres (JJMMAAAA)
     if (cleaned.length > 8) {
       cleaned = cleaned.substring(0, 8);
     }
-
-    // Ajouter les slashes automatiquement
     let formatted = cleaned;
     if (cleaned.length >= 3) {
       formatted = cleaned.substring(0, 2) + '/' + cleaned.substring(2);
@@ -108,16 +96,13 @@ export default function EditProfileScreen({ navigation }: any) {
         const monthNum = parseInt(month);
         const yearNum = parseInt(year);
 
-        // Vérifier que les valeurs sont dans les plages valides
         if (monthNum < 1 || monthNum > 12) {
           newErrors.birthDate = 'Mois invalide (01-12)';
         } else if (dayNum < 1 || dayNum > 31) {
           newErrors.birthDate = 'Jour invalide (01-31)';
         } else {
-          // Créer la date et vérifier qu'elle est valide
           const date = new Date(yearNum, monthNum - 1, dayNum);
 
-          // Vérifier que la date créée correspond bien aux valeurs saisies
           if (
             date.getDate() !== dayNum ||
             date.getMonth() !== monthNum - 1 ||
@@ -125,7 +110,6 @@ export default function EditProfileScreen({ navigation }: any) {
           ) {
             newErrors.birthDate = 'Date invalide';
           } else {
-            // Vérifier l'âge
             const now = new Date();
             const age = now.getFullYear() - date.getFullYear();
             const monthDiff = now.getMonth() - date.getMonth();
@@ -162,13 +146,12 @@ export default function EditProfileScreen({ navigation }: any) {
 
     try {
       setLoading(true);
-
       // CONVERSION EN ISO AVANT ENVOI API
       const data = {
         userName: userName.trim(),
         phoneNumber: phoneNumber.trim(),
         city: city.trim(),
-        birthDate: convertFRtoISO(birthDate), // ← CONVERSION ICI
+        birthDate: convertFRtoISO(birthDate),
         bio: bio.trim() || undefined,
       };
 
@@ -177,31 +160,34 @@ export default function EditProfileScreen({ navigation }: any) {
         await infosUserService.update(user.infosUser.id, data);
         Alert.alert('Succès', 'Profil modifié avec succès !');
 
-        // Attendre 500ms pour que la BDD se mette à jour
         await new Promise(resolve => setTimeout(resolve, 500));
         await refreshUser();
         navigation.goBack();
 
       } else {
-  // Première création du profil
-  await infosUserService.create(data);
-  
-  Alert.alert(
-    'Profil complété ! ',
-    'Votre profil est à jour. Vous pouvez maintenant profiter de toutes les fonctionnalités de l\'application.',
-    [
-      {
-        text: 'Compris',
-        onPress: async () => {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await refreshUser();
-          navigation.goBack();
-        }
+        // Première création du profil
+        await infosUserService.create(data);
+        
+        Alert.alert(
+          'Profil complété !',
+          'Votre profil est à jour. Vous pouvez maintenant profiter de toutes les fonctionnalités de l\'application.',
+          [
+            {
+              text: 'Compris',
+              onPress: async () => {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await refreshUser();
+                
+                if (isFirstTime) {
+                  navigation.replace('ProfileMain'); // Remplace au lieu de goBack
+                } else {
+                  navigation.goBack();
+                }
+              }
+            }
+          ]
+        );
       }
-    ]
-  );
-}
-
 
     } catch (error: any) {
       Alert.alert(
@@ -257,7 +243,7 @@ export default function EditProfileScreen({ navigation }: any) {
         {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
       </View>
 
-      {/* BirthDate EN FORMAT FRANÇAIS AVEC AUTO-FORMATAGE */}
+      {/* BirthDate */}
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Date de naissance * (JJ/MM/AAAA)</Text>
         <TextInput

@@ -41,6 +41,22 @@ export const authService = {
     return { token, user };
   },
 
+  // Vérifier le code et connecter automatiquement
+verifyAndLogin: async (email: string, code: string) => {
+  const response = await apiClient.post('/verify', { email, code });
+  const { token, user } = response.data;
+  
+  // Stocker le token
+  await AsyncStorage.setItem('token', token);
+  apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  
+  // Stocker l'utilisateur
+  await AsyncStorage.setItem('user', JSON.stringify(user));
+  
+  return { token, user };
+},
+
+
   // Déconnexion
   logout: async () => {
     await AsyncStorage.removeItem('token');

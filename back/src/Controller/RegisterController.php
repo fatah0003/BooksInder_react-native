@@ -12,6 +12,7 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 class RegisterController extends AbstractController
 {
@@ -19,7 +20,7 @@ class RegisterController extends AbstractController
         private readonly UserService $userService,
         private readonly SerializerInterface $serializer,
         private readonly RateLimiterFactory $registerLimiter,
-        private EmailService $emailService
+        private readonly JWTTokenManagerInterface $jwtManager
     ) {
     }
 
@@ -45,12 +46,44 @@ class RegisterController extends AbstractController
         // createFromDTO lève BusinessValidationException en cas d’erreur
         $user = $this->userService->createFromDTO($dto);
 
-        // Envoi email de bienvenue
-//        $this->emailService->sendWelcomeEmail(
-//            $user->getEmail(),
-//            $user->getInfosUser()?->getUsername() ?? 'utilisateur'
-//        );
-
         return $this->json($user, 201, [], ['groups' => 'user:read']);
     }
+
+    #[Route('/api/verify', name: 'api_verify_account', methods: ['POST'])]
+    public function verify(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $email = $data['email'] ?? null;
+        $code = $data['code'] ?? null;
+
+        if (!$email || !$code) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Email et code requis'
+            ], 400);
+        }
+
+        try {
+            // Vérifier le code et activer le compte
+            $user = $this->userService->verifyCode($email, $code);
+
+            // Générer un token JWT
+            $token = $this->jwtManager->create($user);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Compte activé avec succès !',
+                'token' => $token,
+                'user' => $user
+            ], 200, [], ['groups' => 'user:read']);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
 }

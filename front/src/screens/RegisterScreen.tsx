@@ -11,7 +11,7 @@ export default function RegisterScreen({ navigation }: any) {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    
+
 
     const { login } = useAuth();
 
@@ -80,18 +80,19 @@ export default function RegisterScreen({ navigation }: any) {
             const data = await response.json();
 
             if (response.ok) {
-      // CONNEXION AUTOMATIQUE
-      await login(email, password);
-      
-      // ATTENDRE UN PEU QUE LE STATE SE METTE À JOUR
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // REDIRECTION VERS EDITPROFILE
-      navigation.navigate('Profil', {
-        screen: 'EditProfile'
-      });
-
-            } else {
+                // Rediriger vers l'écran de vérification
+                Alert.alert(
+                    'Inscription réussie !',
+                    'Un code de vérification a été envoyé à votre email.',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => navigation.navigate('Verification', { email })
+                        }
+                    ]
+                );
+            }
+            else {
                 console.log('Erreur backend:', data);
 
                 let errorMessage = data.error

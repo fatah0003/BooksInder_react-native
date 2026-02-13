@@ -124,6 +124,57 @@ class UserService
         $this->logger->info('User marked as deleted (soft delete)', ['userId' => $id]);
     }
 
+    /**
+     * Vérifie le code et active le compte
+     */
+    public function verifyCode(string $email, string $code): User
+    {
+        // Trouver le user par email
+        $user = $this->userRepository->findOneBy(['email' => $email]);
+
+        if (!$user) {
+            throw new BusinessValidationException('Utilisateur non trouvé.');
+        }
+
+        // Vérifier que le compte n'est pas déjà actif
+        if ($user->getUserStatus() === UserStatusEnum::ACTIVE) {
+            throw new BusinessValidationException('Ce compte est déjà activé.');
+        }
+
+        // Vérifier le code
+        if ($user->getVerificationCode() !== $code) {
+            throw new BusinessValidationException('Code de vérification incorrect.');
+        }
+
+        // Vérifier l'expiration
+        $now = new \DateTimeImmutable();
+        if ($user->getVerificationCodeExpiresAt() < $now) {
+            throw new BusinessValidationException('Le code a expiré. Demandez un nouveau code.');
+        }
+
+        // Activer le compte
+        $user->setUserStatus(UserStatusEnum::ACTIVE);
+        $user->setVerificationCode(null); // Supprime le code
+        $user->setVerificationCodeExpiresAt(null);
+        $user->setUpdatedAt(new \DateTimeImmutable());
+
+        $this->em->flush();
+
+        $this->logger->info('User verified and activated', [
+            'userId' => $user->getId(),
+            'email' => $user->getEmail()
+        ]);
+
+        // Envoyer l'email de bienvenue
+        $this->emailService->sendWelcomeEmail(
+            $user->getEmail(),
+            $user->getInfosUser()?->getUsername() ?? 'utilisateur'
+        );
+
+        return $user;
+    }
+
+
 
 
 
