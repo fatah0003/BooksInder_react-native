@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\User;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -124,6 +125,29 @@ class EmailService
 
         return $this->send($email);
     }
+
+    /**
+     * Envoie le code de vérification à 6 chiffres
+     */
+    public function sendVerificationCode(string $userEmail, string $code): bool
+    {
+        $email = (new Email())
+            ->from($this->fromEmail)
+            ->to($userEmail)
+            ->subject('Code de vérification - Booksinder')
+            ->html(sprintf(
+                '<h1>Bienvenue sur Booksinder ! 📚</h1>
+            <p>Votre code de vérification est :</p>
+            <h2 style="background: #f0f0f0; padding: 20px; text-align: center; letter-spacing: 10px; font-size: 32px;">%s</h2>
+            <p>Ce code expire dans <strong>10 minutes</strong>.</p>
+            <p><small>Si vous n\'avez pas créé de compte, ignorez cet email.</small></p>',
+                htmlspecialchars($code)
+            ));
+
+        return $this->send($email);
+    }
+
+
 
 
     /**

@@ -46,10 +46,10 @@ class RegisterController extends AbstractController
         $user = $this->userService->createFromDTO($dto);
 
         // Envoi email de bienvenue
-        $this->emailService->sendWelcomeEmail(
-            $user->getEmail(),
-            $user->getInfosUser()?->getUsername() ?? 'utilisateur'
-        );
+//        $this->emailService->sendWelcomeEmail(
+//            $user->getEmail(),
+//            $user->getInfosUser()?->getUsername() ?? 'utilisateur'
+//        );
 
         return $this->json($user, 201, [], ['groups' => 'user:read']);
     }

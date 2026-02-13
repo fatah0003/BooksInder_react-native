@@ -80,6 +80,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['user:read'])]
     private ?UserStatusEnum $userStatus = null;
 
+    #[ORM\Column(type: 'string', length: 6, nullable: true)]
+    private ?string $verificationCode = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $verificationCodeExpiresAt = null;
+
     /**
      * @var Collection<int, Exchange>
      */
@@ -272,6 +278,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->exchangeRequest;
     }
+
+    public function getVerificationCode(): ?string
+    {
+        return $this->verificationCode;
+    }
+
+    public function setVerificationCode(?string $verificationCode): self
+    {
+        $this->verificationCode = $verificationCode;
+        return $this;
+    }
+
+    public function getVerificationCodeExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->verificationCodeExpiresAt;
+    }
+
+    public function setVerificationCodeExpiresAt(?\DateTimeImmutable $verificationCodeExpiresAt): self
+    {
+        $this->verificationCodeExpiresAt = $verificationCodeExpiresAt;
+        return $this;
+    }
+
 
     public function addExchangeRequest(Exchange $exchangeRequest): static
     {

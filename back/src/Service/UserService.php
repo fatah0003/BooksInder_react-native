@@ -20,7 +20,8 @@ class UserService
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly ValidatorInterface $validator,
         private readonly UserRepository $userRepository,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private EmailService $emailService
     ) {
     }
 
@@ -45,12 +46,26 @@ class UserService
         $user->setEmail($dto->email);
         $user->setPassword($this->passwordHasher->hashPassword($user, $dto->password));
         $user->setRoles($dto->roles ?? ['ROLE_USER']);
-        $user->setUserStatus(UserStatusEnum::ACTIVE);
+        //status inactive
+        $user->setuserStatus(userstatusEnum::INACTIVE);
+        //generation du code à 6 chiffres
+        $verificationCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $user->setVerificationCode($verificationCode);
+
+        // Code expire dans 30 minutes
+        $expiresAt = new \DateTimeImmutable('+30 minutes');
+        $user->setVerificationCodeExpiresAt($expiresAt);
 
         $this->em->persist($user);
         $this->em->flush();
 
-        $this->logger->info('User created', ['userId' => $user->getId()]);
+        $this->emailService->sendVerificationCode($user->getEmail(), $verificationCode);
+
+        $this->logger->info('User created with verification code', [
+            'userId' => $user->getId(),
+            'email' => $user->getEmail(),
+            'codeExpiresAt' => $expiresAt->format('Y-m-d H:i:s')
+        ]);
 
         return $user;
     }
