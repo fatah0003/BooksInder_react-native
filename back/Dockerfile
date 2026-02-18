@@ -1,4 +1,4 @@
-# Étape 1 : Image de base PHP 8.2 avec FPM (FastCGI Process Manager)
+# Étape 1 : Image de base PHP 8.3 avec FPM (FastCGI Process Manager)
 FROM php:8.3-fpm-alpine
 
 # Étape 2 : Installation des dépendances système

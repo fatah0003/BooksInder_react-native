@@ -152,7 +152,7 @@ MAILER_DSN=smtp://mailpit:1025
 
 #### Étape 3 : Construction de l'image backend
 ```bash
-docker-compose build backend
+docker compose build backend
 ```
 
 - **Première construction** : 10-15 minutes (téléchargement PHP, compilation extensions)
@@ -160,7 +160,7 @@ docker-compose build backend
 
 #### Étape 4 : Démarrage des services
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 Option `-d` : détaché (les conteneurs tournent en arrière-plan)
@@ -168,7 +168,7 @@ Option `-d` : détaché (les conteneurs tournent en arrière-plan)
 **Vérification** :
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 Vous devriez voir 4 conteneurs avec le statut `Up` :
@@ -184,7 +184,7 @@ booksinder_backend    Up
 Attendre 30 secondes que MySQL soit complètement prêt, puis :
 
 ```bash
-docker-compose exec backend php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec backend php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 **Résultat attendu** :
@@ -195,7 +195,7 @@ docker-compose exec backend php bin/console doctrine:migrations:migrate --no-int
 
 #### Étape 6 : Validation du schéma
 ```bash
-docker-compose exec backend php bin/console doctrine:schema:validate
+docker compose exec backend php bin/console doctrine:schema:validate
 ```
 
 Vous devez voir 2 OK :
@@ -249,19 +249,19 @@ Vous devriez voir l'interface web de Mailpit (boîte de réception vide).
 **Tous les services** :
 
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 **Backend uniquement** :
 
 ```bash
-docker-compose logs -f backend
+docker compose logs -f backend
 ```
 
 **Rechercher les erreurs** :
 
 ```bash
-docker-compose logs backend | grep -i error
+docker compose logs backend | grep -i error
 ```
 
 ### 4. État de la base de données MySQL
@@ -310,25 +310,25 @@ db.getCollectionNames()
 ### Gestion des conteneurs
 ```bash
 # Démarrer les services
-docker-compose up -d
+docker compose up -d
 
 # Arrêter les services
-docker-compose stop
+docker compose stop
 
 # Redémarrer les services
-docker-compose restart
+docker compose restart
 
 # Arrêter ET supprimer les conteneurs
-docker-compose down
+docker compose down
 
 # Arrêter et supprimer TOUT (conteneurs + volumes)
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Accès aux conteneurs
 ```bash
 # Shell dans le conteneur backend
-docker-compose exec backend bash
+docker compose exec backend bash
 
 # Shell dans MySQL
 docker exec -it booksinder_mysql mysql -u booksinder -ppassword booksinder
@@ -340,13 +340,13 @@ docker exec -it booksinder_mongodb mongosh
 ### Commandes Symfony
 ```bash
 # Vider le cache
-docker-compose exec backend php bin/console cache:clear
+docker compose exec backend php bin/console cache:clear
 
 # Créer une nouvelle migration
-docker-compose exec backend php bin/console make:migration
+docker compose exec backend php bin/console make:migration
 
 # Lister les routes
-docker-compose exec backend php bin/console debug:router
+docker compose exec backend php bin/console debug:router
 ```
 
 ---
@@ -364,7 +364,7 @@ Notez le SHA du commit stable (ex : `abc1234`).
 
 ### Étape 2 : Arrêter les services
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Étape 3 : Revenir au commit stable
@@ -374,8 +374,8 @@ git checkout abc1234
 
 ### Étape 4 : Reconstruire et relancer
 ```bash
-docker-compose build --no-cache backend
-docker-compose up -d
+docker compose build --no-cache backend
+docker compose up -d
 ```
 
 ### Étape 5 : Restaurer la base de données (si nécessaire)
@@ -465,10 +465,10 @@ SQLSTATE[HY000] Connection refused
 1. Vérifiez l'état de MySQL :
 
 ```bash
-docker-compose logs mysql | grep "ready for connections"
+docker compose logs mysql | grep "ready for connections"
 ```
 
-2. Attendez 30 secondes après `docker-compose up -d`
+2. Attendez 30 secondes après `docker compose up -d`
 
 3. Vérifiez les credentials dans `back/.env.docker`
 
@@ -483,9 +483,9 @@ Failed to write to var/cache: Permission denied
 
 ```bash
 # Reconstruire l'image avec les bonnes permissions
-docker-compose down
-docker-compose build --no-cache backend
-docker-compose up -d
+docker compose down
+docker compose build --no-cache backend
+docker compose up -d
 ```
 
 ### Problème 4 : Les migrations échouent
@@ -506,9 +506,9 @@ docker exec booksinder_mysql mysql -u booksinder -ppassword -e "SELECT 1"
 2. Réinitialisez la base de données :
 
 ```bash
-docker-compose exec backend php bin/console doctrine:database:drop --force
-docker-compose exec backend php bin/console doctrine:database:create
-docker-compose exec backend php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec backend php bin/console doctrine:database:drop --force
+docker compose exec backend php bin/console doctrine:database:create
+docker compose exec backend php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 ### Problème 5 : L'API retourne une erreur 500
@@ -517,19 +517,19 @@ docker-compose exec backend php bin/console doctrine:migrations:migrate --no-int
 1. Consultez les logs :
 
 ```bash
-docker-compose logs backend
+docker compose logs backend
 ```
 
 2. Vérifiez le fichier de log Symfony :
 
 ```bash
-docker-compose exec backend cat var/log/dev.log
+docker compose exec backend cat var/log/dev.log
 ```
 
 3. Videz le cache :
 
 ```bash
-docker-compose exec backend php bin/console cache:clear
+docker compose exec backend php bin/console cache:clear
 ```
 
 ---
@@ -636,7 +636,7 @@ npx expo start -c
 - Appuyez sur `a` pour lancer l'émulateur Android
 - Appuyez sur `i` pour lancer le simulateur iOS (Mac uniquement)
 
-**Important** : Assurez-vous que le backend Docker est démarré (`./deploy.sh` ou `docker-compose up -d`) avant de tester l'application.
+**Important** : Assurez-vous que le backend Docker est démarré (`./deploy.sh` ou `docker compose up -d`) avant de tester l'application.
 
 #### Build Android (APK)
 
@@ -703,7 +703,7 @@ export const API_URL = `${BASE_URL}/api`;
 **En cas de problème** :
 
 1. Consultez d'abord ce guide de dépannage
-2. Vérifiez les logs : `docker-compose logs`
+2. Vérifiez les logs : `docker compose logs`
 3. Ouvrez une issue sur GitHub avec les logs d'erreur
 
 ---
