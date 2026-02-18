@@ -1,19 +1,18 @@
-# Étape 1 : Image de base PHP 8.3 avec FPM (FastCGI Process Manager)
-FROM php:8.3-fpm-alpine
+# Utiliser une image PHP officielle avec FPM
+FROM php:8.3-fpm-alpine AS base
 
-# Étape 2 : Installation des dépendances système
+# Installation des dépendances système
 RUN apk add --no-cache \
     bash \
     git \
     unzip \
+    curl \
     libzip-dev \
     icu-dev \
     oniguruma-dev \
-    autoconf \
-    g++ \
-    make
+    linux-headers
 
-# Étape 3 : Installation des extensions PHP nécessaires
+# Installation des extensions PHP standards
 RUN docker-php-ext-install \
     pdo \
     pdo_mysql \
@@ -21,34 +20,35 @@ RUN docker-php-ext-install \
     intl \
     opcache
 
-# Étape 4 : Installation de l'extension MongoDB via PECL
-RUN pecl install mongodb \
+# Installation de MongoDB via package Alpine (binaire pré-compilé)
+RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing \
+    php83-pecl-mongodb \
+    && ln -s /usr/lib/php83/modules/mongodb.so /usr/local/lib/php/extensions/no-debug-non-zts-20230831/mongodb.so \
     && docker-php-ext-enable mongodb
 
-# Étape 5 : Installation de Composer (directement depuis getcomposer.org)
-RUN apk add --no-cache curl \
-    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+# Installation de Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && chmod +x /usr/local/bin/composer
 
-# Étape 6 : Définir le répertoire de travail
+# Définir le répertoire de travail
 WORKDIR /var/www/html
 
-# Étape 7 : Copier les fichiers de dépendances (pour utiliser le cache Docker)
+# Copier les fichiers de dépendances (optimisation cache)
 COPY composer.json composer.lock ./
 
-# Étape 8 : Installer les dépendances Composer
+# Installer les dépendances
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Étape 9 : Copier tout le code source
+# Copier le code source
 COPY . .
 
-# Étape 10 : Donner les permissions au dossier var
+# Créer les dossiers nécessaires avec permissions
 RUN mkdir -p var/cache var/log \
     && chown -R www-data:www-data var \
     && chmod -R 775 var
 
-# Étape 11 : Exposer le port 8000
+# Exposer le port
 EXPOSE 8000
 
-# Étape 12 : Commande de démarrage
+# Commande de démarrage
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
