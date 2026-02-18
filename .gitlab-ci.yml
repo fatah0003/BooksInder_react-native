@@ -31,6 +31,7 @@ variables:
 build_backend:
   extends: .docker_template
   stage: build
+  timeout: 45m
   script:
     - echo "construction de l'image Docker backend"
     - cd back
