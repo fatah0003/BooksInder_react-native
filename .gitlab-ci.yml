@@ -27,7 +27,12 @@ variables:
 build_backend:
   extends: .docker_template
   stage: build
-  timeout: 20m
+  timeout: 30m
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
   cache:
     key: composer-$CI_COMMIT_REF_SLUG
     paths:
