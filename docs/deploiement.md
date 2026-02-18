@@ -81,13 +81,6 @@ sur smartphone/émulateur. L'application communique avec le backend via l'API RE
 - **Git** : version 2.30 ou supérieure
 - **Curl** : pour les tests de smoke
 
-### Ressources matérielles minimales
-
-- **CPU** : 2 cœurs
-- **RAM** : 4 GB (recommandé : 8 GB)
-- **Disque** : 10 GB d'espace libre
-- **Réseau** : Connexion internet pour télécharger les images Docker
-
 ### Ports utilisés
 
 Assurez-vous que ces ports sont libres sur votre machine :
