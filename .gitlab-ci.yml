@@ -1,29 +1,20 @@
-# Pipeline CI/CD pour Booksinder
-# Projet : Application mobile d'échange de livres
-# Stack : Symfony 7 (PHP 8.3) + MySQL + MongoDB + React Native
-
-# Définition des stages (étapes séquentielles)
 stages:
-  - build      # Construction des images Docker
-  - test       # Exécution des tests automatisés
-  - validate   # Validation post-déploiement
+  - build
+  - test
+  - validate
 
-# Variables globales
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: "/certs"
-  # Cache Composer pour accélérer les builds
   COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/back/.composer-cache"
 
-# Template réutilisable pour jobs nécessitant Docker-in-Docker
 .docker_template:
   image: docker:24-cli
   services:
-    - docker:24-dind
+    - name: docker:24-dind          # ← FIX MTU pour Alpine apk
+      command: ["--mtu=1300"]
   variables:
     DOCKER_DRIVER: overlay2
-    DOCKER_TLS_CERTDIR: "/certs"
-    # Augmenter les timeouts
     DOCKER_CLIENT_TIMEOUT: 300
     COMPOSE_HTTP_TIMEOUT: 300
   before_script:
@@ -32,96 +23,94 @@ variables:
   tags:
     - docker
 
-# STAGE 1 : BUILD
-
+# STAGE 1 : BUILD (cache Docker + Composer)
 build_backend:
   extends: .docker_template
   stage: build
-  timeout: 45m
+  timeout: 20m
+  cache:
+    key: composer-$CI_COMMIT_REF_SLUG
+    paths:
+      - back/.composer-cache/
   script:
-    - echo "construction de l'image Docker backend"
+    - echo "Construction image backend"
     - cd back
-    - docker build -t booksinder-backend:latest .
-    - echo "image backend construite avec succes"
-  only:
-    - dev
-    - main
+    # Cache Docker layers
+    - docker pull booksinder-backend:latest || true
+    - docker build 
+        --cache-from booksinder-backend:latest
+        --tag booksinder-backend:$CI_COMMIT_SHORT_SHA
+        --tag booksinder-backend:latest .
+    - echo "Image backend construite avec succes"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"
 
-# STAGE 2 : TEST
-
+# STAGE 2 : TEST (healthchecks propres)
 test_backend:
   extends: .docker_template
   stage: test
-  timeout: 45m
+  timeout: 20m
   retry:
     max: 2
     when:
       - runner_system_failure
       - stuck_or_timeout_failure
   script:
-    - echo "demarrage des services Docker pour les tests"
-    
-    # Démarrer les services avec docker-compose.ci.yml
     - docker compose -f docker-compose.ci.yml up -d
     
-    # Attendre MySQL avec healthcheck
-    - echo "attente de MySQL avec healthcheck..."
+    # Healthcheck MySQL
     - |
       for i in $(seq 1 30); do
         docker exec booksinder_mysql mysqladmin ping -h localhost -uroot -proot 2>/dev/null && break
-        echo "Tentative $i/30 - MySQL pas encore pret..."
+        echo "MySQL tentative $i/30..."
         sleep 2
       done
-    
-    # Vérifier que les conteneurs sont actifs
+
+    # Healthcheck MongoDB
+    - |
+      for i in $(seq 1 30); do
+        docker exec booksinder_mongodb mongosh --eval "db.adminCommand('ping')" 2>/dev/null && break
+        echo "MongoDB tentative $i/30..."
+        sleep 2
+      done
+
     - docker compose -f docker-compose.ci.yml ps
     
-    # Exécuter les migrations
-    - echo "execution des migrations Doctrine"
+    # Symfony
     - docker exec booksinder_backend php bin/console doctrine:migrations:migrate --no-interaction
-    
-    # Exécuter les tests PHPUnit
-    - echo "execution des tests PHPUnit"
     - docker exec booksinder_backend php bin/phpunit --testdox
     
-    # Arrêter les services
     - docker compose -f docker-compose.ci.yml down -v
-    
+
   artifacts:
     when: always
     paths:
       - back/var/log/
     expire_in: 1 week
-  only:
-    - dev
-    - main
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"
 
-# STAGE 3 : VALIDATE
-
+# STAGE 3 : SMOKE TESTS
 smoke_tests:
   extends: .docker_template
   stage: validate
-  timeout: 45m
+  timeout: 15m
   script:
-    - echo "tests de validation de l'infrastructure"
-    
-    # Démarrer les services avec docker-compose.ci.yml
     - docker compose -f docker-compose.ci.yml up -d
-    - sleep 30
-    
-    # Vérifier que tous les services répondent
-    - echo "test MySQL"
+
+    # Healthcheck MySQL rapide
+    - |
+      for i in $(seq 1 30); do
+        docker exec booksinder_mysql mysqladmin ping -h localhost -uroot -proot 2>/dev/null && break
+        sleep 2
+      done
+
+    # Tests rapides
     - docker exec booksinder_mysql mysql -uroot -proot -e "SHOW DATABASES;"
-    
-    - echo "test MongoDB"
     - docker exec booksinder_mongodb mongosh --eval "db.adminCommand('ping')"
-    
-    - echo "test API Backend"
     - docker exec booksinder_backend php bin/console about
     
-    # Nettoyage
     - docker compose -f docker-compose.ci.yml down -v
-    
-  only:
-    - dev
-    - main
+
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"
