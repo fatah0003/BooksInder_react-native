@@ -25,8 +25,10 @@ RUN docker-php-ext-install \
 RUN pecl install mongodb \
     && docker-php-ext-enable mongodb
 
-# Étape 5 : Installation de Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Étape 5 : Installation de Composer (directement depuis getcomposer.org)
+RUN apk add --no-cache curl \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && chmod +x /usr/local/bin/composer
 
 # Étape 6 : Définir le répertoire de travail
 WORKDIR /var/www/html
