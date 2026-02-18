@@ -45,25 +45,31 @@ build_backend:
 test_backend:
   extends: .docker_template
   stage: test
+  timeout: 45m
   script:
     - echo "demarrage des services Docker pour les tests"
     
-    # Démarrer les services (MySQL, MongoDB, Mailpit, Backend)
+    # Démarrer les services (Docker Compose v2 intégré dans docker:24-cli)
     - docker compose up -d
     
-    # Attendre que MySQL soit prêt
-    - echo "attente de MySQL"
-    - sleep 30
+    # Attendre MySQL avec healthcheck intelligent
+    - echo "attente de MySQL avec healthcheck..."
+    - |
+      for i in $(seq 1 30); do
+        docker exec booksinder_mysql mysqladmin ping -h localhost -uroot -proot 2>/dev/null && break
+        echo "Tentative $i/30 - MySQL pas encore pret..."
+        sleep 2
+      done
     
     # Vérifier que les conteneurs sont actifs
     - docker compose ps
     
     # Exécuter les migrations
-    - echo "exécution des migrations Doctrine"
+    - echo "execution des migrations Doctrine"
     - docker exec booksinder_backend php bin/console doctrine:migrations:migrate --no-interaction
     
     # Exécuter les tests PHPUnit
-    - echo "exécution des tests PHPUnit"
+    - echo "execution des tests PHPUnit"
     - docker exec booksinder_backend php bin/phpunit --testdox
     
     # Arrêter les services
@@ -71,8 +77,6 @@ test_backend:
     
   artifacts:
     when: always
-    reports:
-      junit: back/var/log/junit.xml
     paths:
       - back/var/log/
     expire_in: 1 week
