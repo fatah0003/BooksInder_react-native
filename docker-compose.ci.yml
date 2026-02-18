@@ -1,0 +1,78 @@
+services:
+  # Service 1 : Base de données MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: booksinder_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: booksinder
+      MYSQL_USER: booksinder
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    networks:
+      - booksinder-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service 2 : Base de données MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: booksinder_mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - booksinder-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Service 3 : Serveur mail Mailpit
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: booksinder_mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - booksinder-network
+
+  # Service 4 : Backend Symfony (VERSION CI/CD)
+  backend:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    image: booksinder-backend:latest
+    container_name: booksinder_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # PAS de volume ./back pour garder vendor/ intact
+      - backend_cache:/var/www/html/var/cache
+      - backend_log:/var/www/html/var/log
+    environment:
+      - APP_ENV=test
+    env_file:
+      - ./back/.env.docker
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks:
+      - booksinder-network
+
+volumes:
+  backend_cache:
+  backend_log:
+
+networks:
+  booksinder-network:
+    driver: bridge

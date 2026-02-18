@@ -42,7 +42,7 @@ build_backend:
     - echo "construction de l'image Docker backend"
     - cd back
     - docker build -t booksinder-backend:latest .
-    - echo "image backend construite avec succè"
+    - echo "image backend construite avec succes"
   only:
     - dev
     - main
@@ -61,8 +61,8 @@ test_backend:
   script:
     - echo "demarrage des services Docker pour les tests"
     
-    # Démarrer les services (utilisera le cache local si disponible)
-    - docker compose up -d
+    # Démarrer les services avec docker-compose.ci.yml
+    - docker compose -f docker-compose.ci.yml up -d
     
     # Attendre MySQL avec healthcheck
     - echo "attente de MySQL avec healthcheck..."
@@ -74,7 +74,7 @@ test_backend:
       done
     
     # Vérifier que les conteneurs sont actifs
-    - docker compose ps
+    - docker compose -f docker-compose.ci.yml ps
     
     # Exécuter les migrations
     - echo "execution des migrations Doctrine"
@@ -85,7 +85,7 @@ test_backend:
     - docker exec booksinder_backend php bin/phpunit --testdox
     
     # Arrêter les services
-    - docker compose down -v
+    - docker compose -f docker-compose.ci.yml down -v
     
   artifacts:
     when: always
@@ -101,11 +101,12 @@ test_backend:
 smoke_tests:
   extends: .docker_template
   stage: validate
+  timeout: 45m
   script:
     - echo "tests de validation de l'infrastructure"
     
-    # Démarrer les services
-    - docker compose up -d
+    # Démarrer les services avec docker-compose.ci.yml
+    - docker compose -f docker-compose.ci.yml up -d
     - sleep 30
     
     # Vérifier que tous les services répondent
@@ -119,7 +120,7 @@ smoke_tests:
     - docker exec booksinder_backend php bin/console about
     
     # Nettoyage
-    - docker compose down -v
+    - docker compose -f docker-compose.ci.yml down -v
     
   only:
     - dev
