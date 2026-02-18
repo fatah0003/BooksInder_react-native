@@ -38,7 +38,7 @@ export default function AddBookScreen() {
   // État pour la recherche ISBN
   const [searchingIsbn, setSearchingIsbn] = useState(false);
 
-  // ✅ VÉRIFICATION DU PROFIL AU CHARGEMENT
+  // VÉRIFICATION DU PROFIL AU CHARGEMENT
   useEffect(() => {
     checkUserProfile();
   }, []);
@@ -54,7 +54,7 @@ export default function AddBookScreen() {
 
       const currentUser = JSON.parse(userStr);
 
-      // ✅ Vérifier si le profil est complet
+      // Vérifier si le profil est complet
       const hasUserName = currentUser.infosUser?.userName;
       const hasCity = currentUser.infosUser?.city;
       const hasPhoneNumber = currentUser.infosUser?.phoneNumber;
@@ -90,7 +90,7 @@ export default function AddBookScreen() {
       setCheckingProfile(false);
 
     } catch (error: any) {
-      console.warn('⚠️ Erreur vérification profil:', error.message);
+      console.warn('Erreur vérification profil:', error.message);
       Alert.alert('Erreur', 'Impossible de vérifier votre profil');
       navigation.goBack();
     }
@@ -237,7 +237,7 @@ export default function AddBookScreen() {
     } catch (error: any) {
       console.error('Erreur lors de la création du livre:', error);
 
-      // ✅ Extraction détaillée de l'erreur
+      // Extraction détaillée de l'erreur
       let errorMessage = 'Une erreur est survenue';
 
       if (error.response?.data) {

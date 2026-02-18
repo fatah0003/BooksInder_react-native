@@ -260,20 +260,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 40, // ✅ Espace en bas pour les petits écrans
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 24, // ✅ Réduit de 28 à 24 pour petits écrans
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#000000',
-    marginBottom: 12, // ✅ Réduit de 16 à 12
+    marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14, // ✅ Réduit de 15 à 14
+    fontSize: 14,
     color: '#999999',
-    marginBottom: 24, // ✅ Réduit de 32 à 24
-    lineHeight: 20, // ✅ Réduit de 22 à 20
+    marginBottom: 24,
+    lineHeight: 20,
     textAlign: 'center',
   },
   emailText: {
@@ -286,24 +286,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFE5E5',
     padding: 12,
     borderRadius: 8,
-    marginBottom: 16, // ✅ Réduit de 20 à 16
+    marginBottom: 16,
   },
   errorText: {
     color: '#FF3B30',
-    fontSize: 13, // ✅ Réduit de 14 à 13
+    fontSize: 13,
     marginLeft: 8,
     flex: 1,
   },
   inputContainer: {
-    marginBottom: 12, // ✅ Réduit de 16 à 12
+    marginBottom: 12,
     position: 'relative',
   },
   input: {
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14, // ✅ Réduit de 16 à 14
-    fontSize: 15, // ✅ Réduit de 16 à 15
+    paddingVertical: 14,
+    fontSize: 15, //
     color: '#000000',
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -312,15 +312,15 @@ const styles = StyleSheet.create({
   eyeButton: {
     position: 'absolute',
     right: 12,
-    top: 14, // ✅ Ajusté pour le nouveau padding
+    top: 14,
     padding: 4,
   },
   submitButton: {
     backgroundColor: '#5FBF5F',
     borderRadius: 12,
-    paddingVertical: 14, // ✅ Réduit de 16 à 14
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 16, // ✅ Réduit de 24 à 16
+    marginTop: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -333,30 +333,30 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16, // ✅ Réduit de 17 à 16
+    fontSize: 16,
     fontWeight: '600',
   },
   linksContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16, // ✅ Réduit de 24 à 16
-    flexWrap: 'wrap', // ✅ Permet le retour à la ligne si nécessaire
+    marginTop: 16,
+    flexWrap: 'wrap',
   },
   resendText: {
-    fontSize: 13, // ✅ Réduit de 14 à 13
+    fontSize: 13,
     color: '#999999',
   },
   resendLink: {
-    fontSize: 13, // ✅ Réduit de 14 à 13
+    fontSize: 13,
     color: '#5FBF5F',
     fontWeight: '600',
   },
   backToLoginLink: {
-    fontSize: 14, // ✅ Réduit de 15 à 14
+    fontSize: 14,
     color: '#5B93FF',
     textAlign: 'center',
-    marginTop: 12, // ✅ Réduit de 16 à 12
+    marginTop: 12,
     fontWeight: '500',
   },
 });

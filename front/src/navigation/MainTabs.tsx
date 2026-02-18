@@ -256,7 +256,7 @@ const MainTabs = () => {
         }}
       />
 
-      {/* ✅ ONGLET ADMIN (conditionnel) */}
+      {/* ONGLET ADMIN (conditionnel) */}
       {isAdmin && (
         <Tab.Screen
           name="Admin"

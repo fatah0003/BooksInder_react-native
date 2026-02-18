@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Enregistrer le callback de déconnexion automatique
     setTokenExpiredCallback(() => {
-      console.log('🚨 Callback déconnexion appelé depuis l\'intercepteur');
+      console.log('Callback déconnexion appelé depuis l\'intercepteur');
       setUser(null);
     });
   }, []);
@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (error) {
-      console.log('❌ Erreur lors de la restauration de session:', error);
+      console.log('Erreur lors de la restauration de session:', error);
       setUser(null);
     } finally {
       setLoading(false);

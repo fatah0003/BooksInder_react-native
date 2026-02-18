@@ -34,7 +34,7 @@ export default function UserPublicProfileScreen() {
       console.log('👤 Profil public:', JSON.stringify(profileData, null, 2));
       setData(profileData);
     } catch (err: any) {
-      console.error('❌ Erreur:', err.message);
+      console.error('Erreur:', err.message);
       setError(err.message);
     } finally {
       setLoading(false);

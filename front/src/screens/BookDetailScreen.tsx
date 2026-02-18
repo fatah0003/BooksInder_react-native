@@ -198,7 +198,7 @@ export default function BookDetailScreen() {
 
   if (!book) return;
 
-  // ✅ VÉRIFICATION : L'utilisateur a-t-il au moins un livre actif ?
+  // VÉRIFICATION : L'utilisateur a-t-il au moins un livre actif ?
   try {
     const myBooks = await api.getMyBooks();
     const activeBooks = myBooks.filter(b => b.bookStatus === 'active');
@@ -226,7 +226,7 @@ export default function BookDetailScreen() {
       return;
     }
 
-    // ✅ L'utilisateur a des livres actifs, on continue
+    // L'utilisateur a des livres actifs, on continue
     Alert.alert(
       'Demander un échange',
       `Voulez-vous demander "${book.title}" ?\n\nVous avez ${activeBooks.length} livre(s) disponible(s) à proposer en échange.`,
@@ -270,9 +270,9 @@ export default function BookDetailScreen() {
     );
 
   } catch (error: any) {
-    // ✅ Gestion silencieuse des erreurs 401
+    // Gestion silencieuse des erreurs 401
     if (error.response?.status !== 401) {
-      console.warn('⚠️ Erreur vérification livres disponibles:', error.message);
+      console.warn('Erreur vérification livres disponibles:', error.message);
       Alert.alert('Erreur', 'Impossible de vérifier vos livres disponibles');
     }
   }

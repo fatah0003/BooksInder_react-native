@@ -31,9 +31,9 @@ export const googleBooksService = {
       // Appel à l'API Google
       const response = await fetch(url);
       
-      // ✅ GESTION SPÉCIFIQUE DU 429 (Too Many Requests)
+      // GESTION SPÉCIFIQUE DU 429 (Too Many Requests)
       if (response.status === 429) {
-        console.warn('⚠️ Erreur 429: Limite de requêtes atteinte');
+        console.warn('Erreur 429: Limite de requêtes atteinte');
         
         if (retries > 0) {
           const waitTime = (3 - retries) * 2000; // 2s, puis 4s
@@ -43,7 +43,7 @@ export const googleBooksService = {
         }
         
         // Si plus de retries, retourner null
-        console.warn('❌ Impossible de contacter l\'API après plusieurs tentatives');
+        console.warn('Impossible de contacter l\'API après plusieurs tentatives');
         return null;
       }
       

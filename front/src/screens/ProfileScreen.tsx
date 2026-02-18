@@ -108,7 +108,6 @@ const ProfileScreen = ({ navigation }: any) => {
   );
 };
 
-// AJOUTE CETTE NOUVELLE FONCTION
 const confirmDeleteAccount = async () => {
   // Vérifier que le mot de passe n'est pas vide
   if (!password || password.trim() === '') {
@@ -342,7 +341,6 @@ const confirmDeleteAccount = async () => {
           <View style={{ height: 50 }} />
         </>
       )}
-      {/* ✅ AJOUTE CE MODAL ICI (AVANT </ScrollView>) */}
       <Modal
         visible={showPasswordModal}
         transparent={true}

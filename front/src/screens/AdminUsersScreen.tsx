@@ -75,7 +75,6 @@ export default function AdminUsersScreen() {
                 <Text style={styles.adminBadgeText}>Admin</Text>
               </View>
             )}
-            {/* ✅ AJOUTE ÇA ICI */}
             {item.userStatus === 'deleted' && (
               <View style={styles.deletedBadge}>
                 <Ionicons name="trash" size={14} color="#FFF" />

@@ -11,7 +11,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 40000,
 });
 
 // Fonction pour vérifier si une route est publique
@@ -63,7 +63,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // ✅ Cas spécial : erreur de mot de passe lors de la suppression de compte
+    // Cas spécial : erreur de mot de passe lors de la suppression de compte
     const isDeleteAccountPasswordError = 
       error.config?.url?.includes('/users/') && 
       error.config?.method === 'delete' &&

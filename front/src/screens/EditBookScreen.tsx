@@ -168,11 +168,11 @@ export default function EditBookScreen() {
     };
 
     if (user?.infosUser?.id) {
-      // ✅ Modification existante
+      // Modification existante
       await infosUserService.update(user.infosUser.id, data);
       Alert.alert('Succès', 'Profil modifié avec succès !');
     } else {
-      // ✅ Première création du profil
+      // Première création du profil
       await infosUserService.create(data);
       Alert.alert(
         'Bienvenue !', 
@@ -192,7 +192,7 @@ export default function EditBookScreen() {
     await new Promise(resolve => setTimeout(resolve, 500));
     await refreshUser();
     
-    // ✅ Ne pas utiliser goBack() lors de la première création
+    // Ne pas utiliser goBack() lors de la première création
     if (user?.infosUser?.id) {
       navigation.goBack();
     }

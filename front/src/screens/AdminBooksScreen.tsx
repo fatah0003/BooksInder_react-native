@@ -37,12 +37,12 @@ export default function AdminBooksScreen() {
           try {
             console.log('🗑️ Tentative suppression:', uuid);
             const result = await api.deleteBook(uuid);
-            console.log('✅ Résultat:', result);
+            console.log('Résultat:', result);
             Alert.alert('Succès', 'Livre supprimé avec succès');
             loadBooks();
           } catch (error: any) {
-            console.error('❌ Erreur suppression:', error);
-            console.error('❌ Response:', error.response?.data);
+            console.error('Erreur suppression:', error);
+            console.error('Response:', error.response?.data);
             const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Impossible de supprimer';
             Alert.alert('Erreur', errorMsg);
           }
