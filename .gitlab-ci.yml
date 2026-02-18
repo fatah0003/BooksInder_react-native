@@ -1,0 +1,110 @@
+# Pipeline CI/CD pour Booksinder
+# Projet : Application mobile d'échange de livres
+# Stack : Symfony 7 (PHP 8.3) + MySQL + MongoDB + React Native
+
+# Définition des stages (étapes séquentielles)
+stages:
+  - build      # Construction des images Docker
+  - test       # Exécution des tests automatisés
+  - validate   # Validation post-déploiement
+
+# Variables globales
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  # Cache Composer pour accélérer les builds
+  COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/back/.composer-cache"
+
+# Template réutilisable pour jobs nécessitant Docker-in-Docker
+.docker_template:
+  image: docker:24-cli
+  services:
+    - docker:24-dind
+  before_script:
+    - docker info
+    - docker version
+  tags:
+    - docker
+
+# STAGE 1 : BUILD
+
+build_backend:
+  extends: .docker_template
+  stage: build
+  script:
+    - echo "construction de l'image Docker backend"
+    - cd back
+    - docker build -t booksinder-backend:latest .
+    - echo "image backend construite avec succè"
+  only:
+    - dev
+    - main
+
+# STAGE 2 : TEST
+
+test_backend:
+  extends: .docker_template
+  stage: test
+  script:
+    - echo "demarrage des services Docker pour les tests"
+    
+    # Démarrer les services (MySQL, MongoDB, Mailpit, Backend)
+    - docker compose up -d
+    
+    # Attendre que MySQL soit prêt
+    - echo "attente de MySQL"
+    - sleep 30
+    
+    # Vérifier que les conteneurs sont actifs
+    - docker compose ps
+    
+    # Exécuter les migrations
+    - echo "exécution des migrations Doctrine"
+    - docker exec booksinder_backend php bin/console doctrine:migrations:migrate --no-interaction
+    
+    # Exécuter les tests PHPUnit
+    - echo "exécution des tests PHPUnit"
+    - docker exec booksinder_backend php bin/phpunit --testdox
+    
+    # Arrêter les services
+    - docker compose down -v
+    
+  artifacts:
+    when: always
+    reports:
+      junit: back/var/log/junit.xml
+    paths:
+      - back/var/log/
+    expire_in: 1 week
+  only:
+    - dev
+    - main
+
+# STAGE 3 : VALIDATE
+
+smoke_tests:
+  extends: .docker_template
+  stage: validate
+  script:
+    - echo "tests de validation de l'infrastructure"
+    
+    # Démarrer les services
+    - docker compose up -d
+    - sleep 30
+    
+    # Vérifier que tous les services répondent
+    - echo "test MySQL"
+    - docker exec booksinder_mysql mysql -uroot -proot -e "SHOW DATABASES;"
+    
+    - echo "test MongoDB"
+    - docker exec booksinder_mongodb mongosh --eval "db.adminCommand('ping')"
+    
+    - echo "test API Backend"
+    - docker exec booksinder_backend php bin/console about
+    
+    # Nettoyage
+    - docker compose down -v
+    
+  only:
+    - dev
+    - main
