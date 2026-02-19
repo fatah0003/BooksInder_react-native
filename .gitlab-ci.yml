@@ -90,9 +90,9 @@ test_backend:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"
 
-# -------------------------
+# ------------------------
 # STAGE 3 : SMOKE TESTS
-# -------------------------
+# ------------------------
 smoke_tests:
   extends: .docker_template
   stage: validate
