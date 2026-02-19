@@ -1,19 +1,36 @@
 FROM php:8.3-fpm-alpine
 
-# Paquets système + MongoDB (pré-activé)
-RUN apk --no-cache add \
-    git curl unzip libzip-dev icu-dev \
-    php83-pecl-mongodb && \
-    docker-php-ext-install pdo_mysql zip intl opcache
+# Dépendances système + outils de build pour PECL
+RUN apk add --no-cache \
+    bash git unzip curl \
+    icu-dev libzip-dev \
+    openssl-dev pkgconf \
+    $PHPIZE_DEPS
 
-# Composer (image officielle, rapide)
+# Extensions PHP nécessaires à Symfony
+RUN docker-php-ext-install pdo_mysql zip intl opcache
+
+# MongoDB extension via PECL (non-interactive), puis activation
+RUN yes '' | pecl install mongodb \
+    && docker-php-ext-enable mongodb
+
+# (Optionnel mais très utile pour valider que c'est OK)
+RUN php -m | grep -i mongodb
+
+# Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
-COPY composer.* ./
+
+# Dépendances PHP (après que mongodb soit activé)
+COPY composer.json composer.lock ./
 RUN composer install --no-interaction --no-scripts --optimize-autoloader
+
+# Code source
 COPY . .
-RUN mkdir -p var && chown -R www-data:www-data var
+
+RUN mkdir -p var/cache var/log \
+    && chown -R www-data:www-data var
 
 EXPOSE 8000
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
