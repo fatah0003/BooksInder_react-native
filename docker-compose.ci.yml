@@ -46,7 +46,7 @@ services:
   backend:
     build:
       context: ./back
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.ci
     image: booksinder-backend:latest
     container_name: booksinder_backend
     ports:
