@@ -24,7 +24,7 @@ services:
     image: axllent/mailpit:latest
 
   backend:
-    image: booksinder-backend:latest
+    image: booksinder-backend:${BACKEND_IMAGE_TAG}
     environment:
       APP_ENV: test
     env_file:
