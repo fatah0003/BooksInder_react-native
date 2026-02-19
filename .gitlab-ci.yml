@@ -18,9 +18,9 @@ variables:
   tags:
     - booksinder-vm
 
-# -------------------------
+# ------------------------
 # STAGE 1 : BUILD
-# -------------------------
+# ------------------------
 build_backend:
   extends: .docker_template
   stage: build
