@@ -5,7 +5,7 @@ services:
     container_name: booksinder_mysql
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: booksinder
+      MYSQL_DATABASE: booksinder_test
       MYSQL_USER: booksinder
       MYSQL_PASSWORD: password
     ports:
