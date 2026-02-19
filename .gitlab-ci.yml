@@ -81,7 +81,7 @@ test_backend:
 
     # Migrations + tests
     - docker compose -f docker-compose.ci.yml exec -T backend php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=test
-    - docker compose -f docker-compose.ci.yml exec -T backend php bin/phpunit --testdox --env=test
+    - docker compose -f docker-compose.ci.yml exec -T backend php bin/phpunit --testdox
 
     # Logs pour artifacts
     - mkdir -p artifacts/var-log
