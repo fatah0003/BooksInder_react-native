@@ -21,7 +21,7 @@ variables:
     - docker info
     - docker version
   tags:
-    - docker
+    - booksinder-vm
 
 # STAGE 1 : BUILD (cache Docker + Composer)
 build_backend:
