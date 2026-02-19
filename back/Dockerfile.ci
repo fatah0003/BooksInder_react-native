@@ -1,15 +1,16 @@
 FROM php:8.3-fpm-alpine
 
+# Paquets système + MongoDB (pré-activé)
 RUN apk --no-cache add \
     git curl unzip libzip-dev icu-dev \
     php83-pecl-mongodb && \
-    docker-php-ext-install pdo_mysql zip intl opcache && \
-    docker-php-ext-enable mongodb && \
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    docker-php-ext-install pdo_mysql zip intl opcache
+
+# Composer (image officielle, rapide)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 COPY composer.* ./
-# CI = dev deps OBLIGATOIRES (phpunit, fixtures)
 RUN composer install --no-interaction --no-scripts --optimize-autoloader
 COPY . .
 RUN mkdir -p var && chown -R www-data:www-data var
