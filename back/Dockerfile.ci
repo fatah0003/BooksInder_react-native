@@ -11,6 +11,11 @@ RUN apk add --no-cache \
 RUN docker-php-ext-install pdo_mysql zip intl opcache
 
 # MongoDB extension via PECL (non-interactive), puis activation
+RUN apk add --no-cache ca-certificates openssl \
+    && update-ca-certificates \
+    && pecl update-channels
+
+# MongoDB via PECL (non-interactive) + activation
 RUN yes '' | pecl install mongodb \
     && docker-php-ext-enable mongodb
 
