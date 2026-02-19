@@ -38,7 +38,7 @@ build_backend:
     paths:
       - back/.composer-cache/
   script:
-    - echo "Construction image backend"
+    - echo "Construction image backend "
     - cd back
     # Cache Docker layers
     - docker pull booksinder-backend:latest || true
