@@ -61,31 +61,34 @@ test_backend:
       - runner_system_failure
       - stuck_or_timeout_failure
   script:
-    - docker compose -f docker-compose.ci.yml up -d
-    
-    # Healthcheck MySQL
-    - |
-      for i in $(seq 1 30); do
-        docker exec booksinder_mysql mysqladmin ping -h localhost -uroot -proot 2>/dev/null && break
-        echo "MySQL tentative $i/30..."
-        sleep 2
-      done
+  - docker compose -f docker-compose.ci.yml up -d
+  
+  # Healthchecks
+  - |
+    for i in $(seq 1 30); do
+      docker exec booksinder_mysql mysqladmin ping -h localhost -uroot -proot 2>/dev/null && break
+      echo "MySQL $i/30..."
+      sleep 2
+    done
+  - |
+    for i in $(seq 1 30); do
+      docker exec booksinder_mongodb mongosh --eval "db.adminCommand('ping')" 2>/dev/null && break
+      echo "MongoDB $i/30..."
+      sleep 2
+    done
 
-    # Healthcheck MongoDB
-    - |
-      for i in $(seq 1 30); do
-        docker exec booksinder_mongodb mongosh --eval "db.adminCommand('ping')" 2>/dev/null && break
-        echo "MongoDB tentative $i/30..."
-        sleep 2
-      done
+  # DEBUG : vérifie Symfony
+  - docker exec booksinder_backend php bin/console about
+  - docker exec booksinder_backend php bin/console list | grep doctrine
 
-    - docker compose -f docker-compose.ci.yml ps
-    
-    # Symfony
-    - docker exec booksinder_backend php bin/console doctrine:migrations:migrate --no-interaction
-    - docker exec booksinder_backend php bin/phpunit --testdox
-    
-    - docker compose -f docker-compose.ci.yml down -v
+  # Doctrine : force sans interaction + allow empty
+  - docker exec booksinder_backend php bin/console doctrine:database:create --if-not-exists --no-interaction
+  - docker exec booksinder_backend php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+
+  # Tests
+  - docker exec booksinder_backend php bin/phpunit --testdox
+
+  - docker compose -f docker-compose.ci.yml down -v
 
   artifacts:
     when: always
