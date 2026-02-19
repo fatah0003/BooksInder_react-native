@@ -28,7 +28,7 @@ services:
     environment:
       APP_ENV: test
       # Écrase explicitement les valeurs du .env.docker pour pointer vers la BDD test
-      DATABASE_URL: "mysql://booksinder:password@mysql:3306/booksinder_test?serverVersion=8.0&charset=utf8mb4"
+      DATABASE_URL: "mysql://booksinder:password@mysql:3306/booksinder?serverVersion=8.0&charset=utf8mb4"
       MONGODB_URL: "mongodb://mongodb:27017"
       MONGODB_DB: "booksinder_chat_test"
       MAILER_DSN: "smtp://mailpit:1025"
