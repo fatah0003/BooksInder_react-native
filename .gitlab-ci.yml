@@ -71,7 +71,7 @@ test_backend:
         sleep 2
       done
 
-    # Sécurise la DB de test + droits (évite le 1044 access denied)
+    # Sécurise la DB de test + droits
     - docker compose -f docker-compose.ci.yml exec -T mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS booksinder_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
     - docker compose -f docker-compose.ci.yml exec -T mysql mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON booksinder_test.* TO 'booksinder'@'%'; FLUSH PRIVILEGES;"
 
