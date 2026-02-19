@@ -7,7 +7,7 @@ services:
       MYSQL_USER: booksinder
       MYSQL_PASSWORD: password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -27,8 +27,14 @@ services:
     image: booksinder-backend:${BACKEND_IMAGE_TAG}
     environment:
       APP_ENV: test
-    env_file:
-      - ./back/.env.docker
+      # Écrase explicitement les valeurs du .env.docker pour pointer vers la BDD test
+      DATABASE_URL: "mysql://booksinder:password@mysql:3306/booksinder_test?serverVersion=8.0&charset=utf8mb4"
+      MONGODB_URL: "mongodb://mongodb:27017"
+      MONGODB_DB: "booksinder_chat_test"
+      MAILER_DSN: "smtp://mailpit:1025"
+      JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private-test.pem"
+      JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public-test.pem"
+      JWT_PASSPHRASE: "dwwm_2024"
     depends_on:
       mysql:
         condition: service_healthy
