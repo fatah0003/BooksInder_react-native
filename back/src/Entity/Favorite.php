@@ -9,9 +9,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: FavoriteRepository::class)]
-#[ORM\Table(name: 'favorite', uniqueConstraints: [
-    new ORM\UniqueConstraint(name: 'user_book_unique', columns: ['user_id', 'book_id'])
-])]
+#[ORM\Table(name: 'favorite')]
+#[ORM\UniqueConstraint(name: 'uniq_user_book', columns: ['user_id', 'book_id'])]
+
 #[UniqueEntity(
     fields: ['user', 'book'],
     message: 'Ce livre est déjà dans vos favoris'
