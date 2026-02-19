@@ -41,7 +41,6 @@ build_backend:
     - echo "Construction image backend "
     - cd back
     # Cache Docker layers
-    - docker pull booksinder-backend:latest || true
     - docker build 
         --cache-from booksinder-backend:latest
         --tag booksinder-backend:$CI_COMMIT_SHORT_SHA
