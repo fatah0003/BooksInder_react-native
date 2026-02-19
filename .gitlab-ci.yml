@@ -51,50 +51,43 @@ test_backend:
   needs:
     - job: build_backend
   script:
-    # Démarre les services SANS build (doit être possible car docker-compose.ci.yml n'a plus de build:)
+    # Démarre les services SANS build
     - docker compose -f docker-compose.ci.yml up -d --no-build
     - docker compose -f docker-compose.ci.yml ps
 
-    # Attendre MySQL
+    # Attendre MySQL (version corrigée, 1 seule ligne)
     - |
       for i in $(seq 1 60); do
-        docker compose -f docker-compose.ci.yml exec -T mysql \
-          mysqladmin ping -h localhost -uroot -proot 2>/dev/null && break
+        docker compose -f docker-compose.ci.yml exec -T mysql mysqladmin ping -h localhost -uroot -proot >/dev/null 2>&1 && break
         echo "MySQL wait $i/60..."
         sleep 2
       done
 
-    # Attendre Mongo
+    # Attendre Mongo (version corrigée, 1 seule ligne)
     - |
       for i in $(seq 1 60); do
-        docker compose -f docker-compose.ci.yml exec -T mongodb \
-          mongosh --eval "db.adminCommand('ping')" 2>/dev/null && break
+        docker compose -f docker-compose.ci.yml exec -T mongodb mongosh --eval "db.adminCommand('ping')" >/dev/null 2>&1 && break
         echo "MongoDB wait $i/60..."
         sleep 2
       done
 
     # Sécurise la DB de test + droits (évite le 1044 access denied)
-    - docker compose -f docker-compose.ci.yml exec -T mysql \
-        mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS booksinder_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    - docker compose -f docker-compose.ci.yml exec -T mysql \
-        mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON booksinder_test.* TO 'booksinder'@'%'; FLUSH PRIVILEGES;"
+    - docker compose -f docker-compose.ci.yml exec -T mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS booksinder_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    - docker compose -f docker-compose.ci.yml exec -T mysql mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON booksinder_test.* TO 'booksinder'@'%'; FLUSH PRIVILEGES;"
 
     # DEBUG Symfony
     - docker compose -f docker-compose.ci.yml exec -T backend php bin/console about
     - docker compose -f docker-compose.ci.yml exec -T backend php bin/console list | grep doctrine || true
 
-    # Migrations + tests (toujours en env test)
-    - docker compose -f docker-compose.ci.yml exec -T backend \
-        php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=test
-    - docker compose -f docker-compose.ci.yml exec -T backend \
-        php bin/phpunit --testdox --env=test
+    # Migrations + tests
+    - docker compose -f docker-compose.ci.yml exec -T backend php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=test
+    - docker compose -f docker-compose.ci.yml exec -T backend php bin/phpunit --testdox --env=test
 
-    # Récupérer les logs Symfony depuis le conteneur (pour artifacts)
+    # Logs pour artifacts
     - mkdir -p artifacts/var-log
     - docker compose -f docker-compose.ci.yml cp backend:/var/www/html/var/log ./artifacts/var-log || true
 
   after_script:
-    # Toujours cleanup (même si le job échoue)
     - docker compose -f docker-compose.ci.yml down -v --remove-orphans || true
 
   artifacts:
