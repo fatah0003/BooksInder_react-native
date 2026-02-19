@@ -7,11 +7,7 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_CLIENT_TIMEOUT: "600"
   COMPOSE_HTTP_TIMEOUT: "600"
-
-  # Isole les containers/réseaux par pipeline (évite conflits si un job timeout)
   COMPOSE_PROJECT_NAME: "booksinder_${CI_PIPELINE_ID}"
-
-  # Tag de l'image backend à utiliser (celle buildée au stage build)
   BACKEND_IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
 
 .docker_template:
@@ -32,7 +28,6 @@ build_backend:
   script:
     - echo "Build backend image (CI)"
     - cd back
-    # Build l'image CI (Dockerfile.ci) et tag avec le commit
     - docker build -f Dockerfile.ci
       --tag "booksinder-backend:${CI_COMMIT_SHORT_SHA}"
       --tag "booksinder-backend:latest"
@@ -51,37 +46,44 @@ test_backend:
   needs:
     - job: build_backend
   script:
-    # Démarre les services SANS build
     - docker compose -f docker-compose.ci.yml up -d --no-build
     - docker compose -f docker-compose.ci.yml ps
 
-    # Attendre MySQL
+    # Attendre MySQL — utilise 127.0.0.1 pour forcer TCP (pas de socket Unix)
     - |
       for i in $(seq 1 60); do
-        docker compose -f docker-compose.ci.yml exec -T mysql mysqladmin ping -h localhost -uroot -proot >/dev/null 2>&1 && break
+        docker compose -f docker-compose.ci.yml exec -T mysql \
+          mysqladmin ping -h 127.0.0.1 -uroot -proot --silent >/dev/null 2>&1 && echo "MySQL OK" && break
         echo "MySQL wait $i/60..."
         sleep 2
       done
 
-    # Attendre Mongo
+    # Attendre MongoDB
     - |
       for i in $(seq 1 60); do
-        docker compose -f docker-compose.ci.yml exec -T mongodb mongosh --eval "db.adminCommand('ping')" >/dev/null 2>&1 && break
+        docker compose -f docker-compose.ci.yml exec -T mongodb \
+          mongosh --eval "db.adminCommand('ping')" >/dev/null 2>&1 && echo "MongoDB OK" && break
         echo "MongoDB wait $i/60..."
         sleep 2
       done
 
-    # Sécurise la DB de test + droits
-    - docker compose -f docker-compose.ci.yml exec -T mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS booksinder_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-    - docker compose -f docker-compose.ci.yml exec -T mysql mysql -uroot -proot -e "GRANT ALL PRIVILEGES ON booksinder_test.* TO 'booksinder'@'%'; FLUSH PRIVILEGES;"
+    # Créer la BDD et les droits — 127.0.0.1 obligatoire ici aussi
+    - docker compose -f docker-compose.ci.yml exec -T mysql \
+      mysql -h 127.0.0.1 -uroot -proot -e \
+      "CREATE DATABASE IF NOT EXISTS booksinder_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    - docker compose -f docker-compose.ci.yml exec -T mysql \
+      mysql -h 127.0.0.1 -uroot -proot -e \
+      "GRANT ALL PRIVILEGES ON booksinder_test.* TO 'booksinder'@'%'; FLUSH PRIVILEGES;"
 
-    # DEBUG Symfony
+    # Debug Symfony
     - docker compose -f docker-compose.ci.yml exec -T backend php bin/console about
     - docker compose -f docker-compose.ci.yml exec -T backend php bin/console list | grep doctrine || true
 
     # Migrations + tests
-    - docker compose -f docker-compose.ci.yml exec -T backend php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=test
-    - docker compose -f docker-compose.ci.yml exec -T backend php bin/phpunit --testdox
+    - docker compose -f docker-compose.ci.yml exec -T backend \
+      php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration --env=test
+    - docker compose -f docker-compose.ci.yml exec -T backend \
+      php bin/phpunit --testdox
 
     # Logs pour artifacts
     - mkdir -p artifacts/var-log
@@ -111,12 +113,13 @@ smoke_tests:
   script:
     - docker compose -f docker-compose.ci.yml up -d --no-build
 
+    # 127.0.0.1 ici aussi
     - docker compose -f docker-compose.ci.yml exec -T mysql \
-        mysql -uroot -proot -e "SHOW DATABASES;"
+      mysql -h 127.0.0.1 -uroot -proot -e "SHOW DATABASES;"
     - docker compose -f docker-compose.ci.yml exec -T mongodb \
-        mongosh --eval "db.adminCommand('ping')"
+      mongosh --eval "db.adminCommand('ping')"
     - docker compose -f docker-compose.ci.yml exec -T backend \
-        php bin/console about
+      php bin/console about
 
   after_script:
     - docker compose -f docker-compose.ci.yml down -v --remove-orphans || true
