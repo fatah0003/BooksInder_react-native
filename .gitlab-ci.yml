@@ -55,7 +55,7 @@ test_backend:
     - docker compose -f docker-compose.ci.yml up -d --no-build
     - docker compose -f docker-compose.ci.yml ps
 
-    # Attendre MySQL (version corrigée, 1 seule ligne)
+    # Attendre MySQL
     - |
       for i in $(seq 1 60); do
         docker compose -f docker-compose.ci.yml exec -T mysql mysqladmin ping -h localhost -uroot -proot >/dev/null 2>&1 && break
@@ -63,7 +63,7 @@ test_backend:
         sleep 2
       done
 
-    # Attendre Mongo (version corrigée, 1 seule ligne)
+    # Attendre Mongo
     - |
       for i in $(seq 1 60); do
         docker compose -f docker-compose.ci.yml exec -T mongodb mongosh --eval "db.adminCommand('ping')" >/dev/null 2>&1 && break
