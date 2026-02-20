@@ -5,6 +5,7 @@ stages:
 
 variables:
   DOCKER_DRIVER: overlay2
+  DOCKER_HOST: "unix:///var/run/docker.sock"
   DOCKER_CLIENT_TIMEOUT: "600"
   COMPOSE_HTTP_TIMEOUT: "600"
   COMPOSE_PROJECT_NAME: "booksinder_${CI_PIPELINE_ID}"
@@ -14,7 +15,8 @@ variables:
   image: docker:28-cli
   before_script:
     - docker version
-    - docker info
+    - ls -la /var/run/docker.sock
+    - docker compose -f docker-compose.ci.yml down -v --remove-orphans 2>/dev/null || true
   tags:
     - booksinder-vm
 
@@ -90,9 +92,9 @@ test_backend:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main"
 
-# ------------------------
+# -------------------------
 # STAGE 3 : SMOKE TESTS
-# ------------------------
+# -------------------------
 smoke_tests:
   extends: .docker_template
   stage: validate
