@@ -27,6 +27,7 @@ services:
     image: booksinder-backend:${BACKEND_IMAGE_TAG}
     environment:
       APP_ENV: test
+      CI: "true"
       # Écrase explicitement les valeurs du .env.docker pour pointer vers la BDD test
       DATABASE_URL: "mysql://booksinder:password@mysql:3306/booksinder?serverVersion=8.0&charset=utf8mb4"
       MONGODB_URL: "mongodb://mongodb:27017"
