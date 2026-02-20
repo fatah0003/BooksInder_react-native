@@ -8,7 +8,9 @@ RUN apk add --no-cache \
     $PHPIZE_DEPS
 
 # Extensions PHP nécessaires à Symfony
-RUN docker-php-ext-install pdo_mysql zip intl opcache
+RUN apk add --no-cache freetype-dev libjpeg-turbo-dev libpng-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql zip intl opcache gd
 
 # MongoDB extension via PECL (non-interactive), puis activation
 RUN apk add --no-cache ca-certificates openssl \
