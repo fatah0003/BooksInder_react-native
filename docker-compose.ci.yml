@@ -32,9 +32,9 @@ services:
       MONGODB_URL: "mongodb://mongodb:27017"
       MONGODB_DB: "booksinder_chat_test"
       MAILER_DSN: "smtp://mailpit:1025"
-      JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private-test.pem"
-      JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public-test.pem"
-      JWT_PASSPHRASE: "dwwm_2024"
+      JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private.pem"
+      JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public.pem"
+      JWT_PASSPHRASE: ""
     depends_on:
       mysql:
         condition: service_healthy
