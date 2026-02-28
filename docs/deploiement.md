@@ -141,7 +141,7 @@ MONGODB_URL="mongodb://mongodb:27017"
 MAILER_DSN=smtp://mailpit:1025
 ```
 
-⚠️ **En production** : Utilisez des mots de passe sécurisés et des secrets Symfony.
+**En production** : Utilisez des mots de passe sécurisés et des secrets Symfony.
 
 #### Étape 3 : Construction de l'image backend
 ```bash

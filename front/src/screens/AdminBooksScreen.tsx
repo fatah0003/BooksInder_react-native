@@ -74,9 +74,9 @@ export default function AdminBooksScreen() {
             {item.author}
           </Text>
           <Text style={styles.bookOwner}>
-            👤 {item.user?.infosUser?.userName || item.user?.email || 'Inconnu'}
+            <Ionicons name="person-outline" size={18} color="#666" /> {item.user?.infosUser?.userName || item.user?.email || 'Inconnu'}
           </Text>
-          <Text style={styles.bookLocation}>📍 {item.location}</Text>
+          <Text style={styles.bookLocation}> <Ionicons name="location-outline" size={20} color="#666" /> {item.location}</Text>
         </View>
 
         <TouchableOpacity

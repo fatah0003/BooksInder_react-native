@@ -1,17 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { api } from '../services/api';
 import { UserPublicProfileData } from '../types/UserPublicProfile';
 import { API_URL, BASE_URL } from '../config/apiConfig';
+import { Ionicons } from '@expo/vector-icons';
 
 type UserPublicProfileRouteProp = RouteProp<{ UserPublicProfile: { userUuid: string } }, 'UserPublicProfile'>;
 
@@ -77,7 +70,7 @@ export default function UserPublicProfileScreen() {
         {user.infosUser ? (
           <>
             <Text style={styles.username}>@{user.infosUser.userName}</Text>
-            <Text style={styles.city}>📍 {user.infosUser.city}</Text>
+            <Text style={styles.city}> <Ionicons name="location-outline" size={20} color="#666" /> {user.infosUser.city}</Text>
             {user.infosUser.bio && (
               <Text style={styles.bio}>{user.infosUser.bio}</Text>
             )}
@@ -117,7 +110,7 @@ export default function UserPublicProfileScreen() {
                 <View style={styles.bookInfo}>
                   <Text style={styles.bookTitle}>{book.title}</Text>
                   <Text style={styles.bookAuthor}>par {book.author}</Text>
-                  <Text style={styles.bookLocation}>📍 {book.location}</Text>
+                  <Text style={styles.bookLocation}><Ionicons name="location-outline" size={20} color="#666" /> {book.location}</Text>
                 </View>
               </TouchableOpacity>
             );

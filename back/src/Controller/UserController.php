@@ -106,7 +106,7 @@ class UserController extends AbstractController
             throw new UnauthorizedActionException('Accès refusé');
         }
 
-        // ✅ NOUVEAU : Si c'est un user normal qui supprime son propre compte, vérifier le mot de passe
+        // Si c'est un user normal qui supprime son propre compte, vérifier le mot de passe
         if ($currentUser === $user && !in_array('ROLE_ADMIN', $currentUser->getRoles(), true)) {
             $data = json_decode($request->getContent(), true);
             $password = $data['password'] ?? null;

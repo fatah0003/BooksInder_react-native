@@ -1,0 +1,191 @@
+import { StyleSheet } from 'react-native';
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+    paddingTop: 60,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    marginTop: 10,
+    color: '#000',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 15,
+    marginBottom: 8,
+    color: '#000',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    backgroundColor: '#FAFAFA',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+    paddingTop: 15,
+  },
+  selectButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    backgroundColor: '#FAFAFA',
+    padding: 15,
+  },
+  selectButtonText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  placeholderText: {
+    color: '#CCC',
+  },
+  checkboxContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    color: '#333',
+    marginLeft: 10,
+  },
+  imagePickerButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 16,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  imagePickerText: {
+    fontSize: 15,
+    color: '#333',
+    flex: 1,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  submitButton: {
+    backgroundColor: '#4CAF50',
+    padding: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginTop: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  illustrationContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  illustration: {
+    width: 250,
+    height: 180,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '60%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  modalCloseButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  modalCloseText: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  // isbn
+  isbnContainer: {
+    position: 'relative',
+  },
+  isbnInput: {
+    paddingRight: 50, // Espace pour le loader
+  },
+  isbnLoader: {
+    position: 'absolute',
+    right: 15,
+    top: 15,
+  },
+  isbnSearchText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginTop: 5,
+    fontStyle: 'italic',
+  },
+});

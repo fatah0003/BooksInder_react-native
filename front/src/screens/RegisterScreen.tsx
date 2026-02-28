@@ -211,10 +211,24 @@ export default function RegisterScreen({ navigation }: any) {
             <View style={styles.termsContainer}>
                 <Text style={styles.termsText}>
                     En cliquant sur S'inscrire, vous{'\n'}
-                    acceptez nos <Text style={styles.termsLink}>Conditions d'utilisation</Text>{'\n'}
-                    et notre <Text style={styles.termsLink}>Politique de confidentialité</Text>
+                    acceptez nos{' '}
+                    <Text
+                        style={styles.termsLink}
+                        onPress={() => navigation.navigate('Terms')}
+                    >
+                        Conditions d'utilisation
+                    </Text>
+                    {'\n'}
+                    et notre{' '}
+                    <Text
+                        style={styles.termsLink}
+                        onPress={() => navigation.navigate('PrivacyPolicy')}
+                    >
+                        Politique de confidentialité
+                    </Text>
                 </Text>
             </View>
+
         </ScrollView>
     );
 }

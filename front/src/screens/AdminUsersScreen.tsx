@@ -83,7 +83,7 @@ export default function AdminUsersScreen() {
             )}
           </View>
           <Text style={styles.userEmail}>{item.email}</Text>
-          <Text style={styles.userCity}>📍 {item.infosUser?.city || 'Non renseigné'}</Text>
+          <Text style={styles.userCity}><Ionicons name="location-outline" size={20} color="#666" /> {item.infosUser?.city || 'Non renseigné'}</Text>
         </View>
 
         {!isCurrentUser ? (
