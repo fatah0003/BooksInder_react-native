@@ -114,7 +114,7 @@ class EmailService
             ->to($requesterEmail)
             ->subject('Votre demande d\'échange a été acceptée !')
             ->html(sprintf(
-                '<h1>Bonne nouvelle ! 🎉</h1>
+                '<h1>Bonne nouvelle</h1>
             <p><strong>%s</strong> a accepté votre demande d\'échange.</p>
             <p>Livre concerné : <strong>%s</strong></p>
             <p>Vous pouvez maintenant discuter ensemble pour organiser l\'échange.</p>
