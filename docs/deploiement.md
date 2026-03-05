@@ -586,8 +586,7 @@ Le frontend React Native se déploie indépendamment du backend via les stores d
 
 ```typescript
 /*seul changement au changement de réseau auquel le pc est connecté*/
-const HOST = '192.168.1.xxx'; // Ethernet maison
-// const HOST = '192.168.1.xx'; // wifi maison
+const HOST = '192.168.1.xxx';
 const PORT = '8000';
 
 export const BASE_URL = `http://${HOST}:${PORT}`;

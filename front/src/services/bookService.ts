@@ -1,7 +1,7 @@
 import apiClient from './api';
 import { Book } from '../types/Book';
 
-// Énumérations (doivent correspondre au backend)
+// Énumérations
 export type BookCategorie = 'philosophy' | 'fiction' | 'Historical' | 'science_fiction';
 export type ExchangeType = 'temporary' | 'permanent';
 export type BookState = 'new' | 'like_new' | 'very_good' | 'good' | 'acceptable' | 'well_loved';

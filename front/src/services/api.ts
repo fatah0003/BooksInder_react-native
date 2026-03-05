@@ -52,7 +52,7 @@ apiClient.interceptors.request.use(
         console.log('Token ajouté pour:', config.url);
       }
     } else {
-      console.log('🌐 Route publique (pas de token):', config.url);
+      console.log('Route publique', config.url);
     }
     return config;
   },
